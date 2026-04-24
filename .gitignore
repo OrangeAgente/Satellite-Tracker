@@ -1,0 +1,12 @@
+node_modules
+dist
+.vite
+.env
+.env.*
+!.env.example
+public/data/satellites.json
+public/data/tle.txt
+public/data/build-info.json
+.DS_Store
+*.log
+*.tsbuildinfo
