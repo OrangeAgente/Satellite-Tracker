@@ -4,7 +4,6 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-# No lockfile yet on first build; fall back to `npm install`.
 RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # ---- dev: runs the Vite dev server with source bind-mounted at runtime ----
@@ -27,11 +26,28 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
 COPY . .
-RUN npm run build:data && npm run build
+RUN mkdir -p public/data \
+ && if npm run build:data; then \
+      echo "[build] dataset refreshed from CelesTrak"; \
+    elif [ -s public/data/satellites.json ]; then \
+      echo "[build] build:data failed; keeping bundled dataset"; \
+    else \
+      echo "[build] build:data failed and no bundled dataset; writing empty placeholder"; \
+      printf '{"generatedAt":"","count":0,"categoryGroups":[],"satellites":[]}' > public/data/satellites.json; \
+    fi \
+ && npm run build
 
-# ---- prod: serves the built dist via nginx ----
-FROM nginx:1.27-alpine AS prod
-COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# ---- prod: tiny Node server (static + Cohere proxy), zero npm deps ----
+FROM node:20-alpine AS prod
+WORKDIR /app
+RUN apk add --no-cache tini && adduser -D -H -u 10001 app
+COPY --from=build /app/dist /app/dist
+COPY server/server.js /app/server/server.js
+ENV HOST=0.0.0.0 \
+    PORT=8080 \
+    NODE_ENV=production \
+    STATIC_DIR=/app/dist
+USER app
+EXPOSE 8080
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["node", "server/server.js"]

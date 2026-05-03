@@ -68,6 +68,14 @@ const CATEGORY_GROUPS = [
   "radar",
   "cubesat",
   "other",
+  // Debris and rocket-body clouds — surfaces DEB / R/B objects in the catalog.
+  "cosmos-2251-debris",
+  "iridium-33-debris",
+  "1999-025",
+  "2012-044",
+  "2019-006",
+  "2021-022",
+  "last-30-days",
 ];
 
 const USER_AGENT = "satellite-tracker/0.1 (+https://github.com/orangeagente/satellite-tracker)";
