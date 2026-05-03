@@ -30,7 +30,7 @@ export function OrbitLine({ sat }: { sat: Satellite }) {
     const g = new THREE.BufferGeometry();
     g.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
     const m = new THREE.LineBasicMaterial({
-      color: 0xffffff,
+      color: 0xffb547,
       transparent: true,
       opacity: 0.75,
     });

@@ -10,3 +10,5 @@ public/data/build-info.json
 .DS_Store
 *.log
 *.tsbuildinfo
+.design/
+.railway/

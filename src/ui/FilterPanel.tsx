@@ -1,44 +1,59 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../store";
-import type { FilterState, OrbitClass, Satellite } from "../types";
+import type { OrbitClass, Satellite } from "../types";
+import { inferUsage, type UsageBucket } from "../data/usage";
 
 interface Props {
   satellites: Satellite[];
 }
 
-type Dim = keyof FilterState;
-
 const ORBITS: OrbitClass[] = ["LEO", "MEO", "GEO", "HEO"];
+const ORBIT_SWATCH: Record<OrbitClass, string> = {
+  LEO: "var(--orb-leo)",
+  MEO: "var(--orb-meo)",
+  GEO: "var(--orb-geo)",
+  HEO: "var(--orb-heo)",
+  UNK: "var(--orb-unk)",
+};
+const USER_BUCKETS: UsageBucket[] = ["Civil", "Commercial", "Government", "Military"];
 const OBJECT_TYPES = ["PAY", "R/B", "DEB", "UNK"];
-const USER_BUCKETS = ["Military", "Government", "Commercial", "Civil"];
 
 function buildOptions(satellites: Satellite[]) {
   const countries = new Map<string, number>();
   const categories = new Map<string, number>();
+  const orbits: Record<string, number> = {};
+  const types: Record<string, number> = {};
+  const usage: Record<string, number> = { Civil: 0, Commercial: 0, Government: 0, Military: 0 };
   for (const s of satellites) {
     const country = s.ucs?.operatorCountry || s.country;
     if (country) countries.set(country, (countries.get(country) || 0) + 1);
     for (const c of s.categories) categories.set(c, (categories.get(c) || 0) + 1);
+    orbits[s.orbitClass] = (orbits[s.orbitClass] ?? 0) + 1;
+    types[s.objectType] = (types[s.objectType] ?? 0) + 1;
+    for (const u of inferUsage(s)) usage[u] = (usage[u] ?? 0) + 1;
   }
-  const countrySorted = [...countries.entries()].sort((a, b) => b[1] - a[1]);
-  const categorySorted = [...categories.entries()].sort((a, b) => b[1] - a[1]);
-  return { countrySorted, categorySorted };
+  return {
+    countrySorted: [...countries.entries()].sort((a, b) => b[1] - a[1]),
+    categorySorted: [...categories.entries()].sort((a, b) => b[1] - a[1]),
+    orbits,
+    types,
+    usage,
+  };
 }
 
 export function FilterPanel({ satellites }: Props) {
   const filters = useApp((s) => s.filters);
   const toggleFilter = useApp((s) => s.toggleFilter);
   const clearAllFilters = useApp((s) => s.clearAllFilters);
-  const [open, setOpen] = useState(true);
   const [countryQuery, setCountryQuery] = useState("");
   const [categoryQuery, setCategoryQuery] = useState("");
 
-  const { countrySorted, categorySorted } = useMemo(() => buildOptions(satellites), [satellites]);
+  const opts = useMemo(() => buildOptions(satellites), [satellites]);
 
-  const filteredCountries = countrySorted.filter(([c]) =>
+  const filteredCountries = opts.countrySorted.filter(([c]) =>
     c.toLowerCase().includes(countryQuery.toLowerCase()),
   );
-  const filteredCategories = categorySorted.filter(([c]) =>
+  const filteredCategories = opts.categorySorted.filter(([c]) =>
     c.toLowerCase().includes(categoryQuery.toLowerCase()),
   );
 
@@ -50,133 +65,133 @@ export function FilterPanel({ satellites }: Props) {
     filters.objectTypes.size;
 
   return (
-    <section className={`filters ${open ? "open" : "closed"}`}>
-      <header>
-        <button className="toggle" onClick={() => setOpen((o) => !o)}>
-          Filters {activeCount > 0 && <span className="badge">{activeCount}</span>}
-        </button>
-        {activeCount > 0 && (
-          <button className="clear" onClick={clearAllFilters}>
-            Clear all
+    <section className="ops-section">
+      <div className="ops-section-h">
+        <span>Filters</span>
+        {activeCount > 0 ? (
+          <button className="ops-filter-clear" onClick={clearAllFilters}>
+            CLEAR · {activeCount}
           </button>
+        ) : (
+          <span className="right">—</span>
         )}
-      </header>
-      {open && (
-        <div className="filters-body">
-          <Group
-            title="Users (UCS)"
-            dim="users"
-            options={USER_BUCKETS.map((u) => [u, null] as [string, number | null])}
-            filters={filters}
-            toggle={toggleFilter}
-          />
-          <Group
-            title="Orbit class"
-            dim="orbitClasses"
-            options={ORBITS.map((o) => [o, null] as [string, number | null])}
-            filters={filters}
-            toggle={toggleFilter}
-          />
-          <Group
-            title="Object type"
-            dim="objectTypes"
-            options={OBJECT_TYPES.map((t) => [t, null] as [string, number | null])}
-            filters={filters}
-            toggle={toggleFilter}
-          />
-          <details open>
-            <summary>Country (operator)</summary>
-            <input
-              type="search"
-              placeholder="Filter list…"
-              value={countryQuery}
-              onChange={(e) => setCountryQuery(e.target.value)}
+      </div>
+
+      <div className="ops-filter-row">
+        <span className="ops-flbl">ORBIT</span>
+        <div className="ops-pills">
+          {ORBITS.map((o) => (
+            <Pill
+              key={o}
+              label={o}
+              count={opts.orbits[o] ?? 0}
+              swatch={ORBIT_SWATCH[o]}
+              active={filters.orbitClasses.has(o)}
+              onClick={() => toggleFilter("orbitClasses", o)}
             />
-            <div className="chip-list scroll">
-              {filteredCountries.slice(0, 120).map(([val, n]) => (
-                <Chip
-                  key={val}
-                  label={val}
-                  count={n}
-                  active={filters.countries.has(val)}
-                  onClick={() => toggleFilter("countries", val)}
-                />
-              ))}
-            </div>
-          </details>
-          <details>
-            <summary>CelesTrak category</summary>
-            <input
-              type="search"
-              placeholder="Filter list…"
-              value={categoryQuery}
-              onChange={(e) => setCategoryQuery(e.target.value)}
-            />
-            <div className="chip-list scroll">
-              {filteredCategories.map(([val, n]) => (
-                <Chip
-                  key={val}
-                  label={val}
-                  count={n}
-                  active={filters.categories.has(val)}
-                  onClick={() => toggleFilter("categories", val)}
-                />
-              ))}
-            </div>
-          </details>
+          ))}
         </div>
-      )}
+      </div>
+
+      <div className="ops-filter-row">
+        <span className="ops-flbl">USAGE</span>
+        <div className="ops-pills">
+          {USER_BUCKETS.map((u) => (
+            <Pill
+              key={u}
+              label={u}
+              count={opts.usage[u] ?? 0}
+              active={filters.users.has(u)}
+              onClick={() => toggleFilter("users", u)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="ops-filter-row">
+        <span className="ops-flbl">TYPE</span>
+        <div className="ops-pills">
+          {OBJECT_TYPES.map((t) => (
+            <Pill
+              key={t}
+              label={t}
+              count={opts.types[t] ?? 0}
+              active={filters.objectTypes.has(t)}
+              onClick={() => toggleFilter("objectTypes", t)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <details className="ops-filter-extras">
+        <summary>Country / operator</summary>
+        <input
+          type="search"
+          placeholder="Filter list…"
+          value={countryQuery}
+          onChange={(e) => setCountryQuery(e.target.value)}
+        />
+        <div className="ops-pills ops-chip-scroll">
+          {filteredCountries.slice(0, 120).map(([val, n]) => (
+            <Pill
+              key={val}
+              label={val}
+              count={n}
+              active={filters.countries.has(val)}
+              onClick={() => toggleFilter("countries", val)}
+            />
+          ))}
+        </div>
+      </details>
+
+      <details className="ops-filter-extras">
+        <summary>Category</summary>
+        <input
+          type="search"
+          placeholder="Filter list…"
+          value={categoryQuery}
+          onChange={(e) => setCategoryQuery(e.target.value)}
+        />
+        <div className="ops-pills ops-chip-scroll">
+          {filteredCategories.map(([val, n]) => (
+            <Pill
+              key={val}
+              label={val}
+              count={n}
+              active={filters.categories.has(val)}
+              onClick={() => toggleFilter("categories", val)}
+            />
+          ))}
+        </div>
+      </details>
     </section>
   );
 }
 
-function Group({
-  title,
-  dim,
-  options,
-  filters,
-  toggle,
-}: {
-  title: string;
-  dim: Dim;
-  options: [string, number | null][];
-  filters: FilterState;
-  toggle: (dim: Dim, v: string) => void;
-}) {
-  const set = filters[dim] as Set<string>;
-  return (
-    <div className="filter-group">
-      <div className="filter-group-title">{title}</div>
-      <div className="chip-list">
-        {options.map(([val, n]) => (
-          <Chip
-            key={val}
-            label={val}
-            count={n}
-            active={set.has(val)}
-            onClick={() => toggle(dim, val)}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Chip({
+function Pill({
   label,
   count,
+  swatch,
   active,
   onClick,
 }: {
   label: string;
-  count: number | null;
+  count?: number;
+  swatch?: string;
   active: boolean;
   onClick: () => void;
 }) {
+  const empty = count != null && count === 0;
   return (
-    <button className={`chip ${active ? "active" : ""}`} onClick={onClick}>
+    <button
+      className={`ops-pill${active ? " on" : ""}${empty ? " empty" : ""}`}
+      onClick={empty ? undefined : onClick}
+      disabled={empty}
+      title={empty ? `${label} — none in current dataset` : label}
+    >
+      {swatch && <i style={{ background: swatch }} />}
       {label}
-      {count != null && <span className="chip-count">{count}</span>}
+      {count != null && <span className="ops-pill-count">{count.toLocaleString()}</span>}
     </button>
   );
 }

@@ -1,0 +1,46 @@
+server {
+    listen ${PORT};
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    # Hide nginx version from Server header.
+    server_tokens off;
+
+    # Security headers — applied to every response.
+    add_header X-Frame-Options "DENY" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), payment=(), usb=(), geolocation=(self)" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    # CSP: SPA assets are self-hosted; LLM calls go to Cohere; fonts come from
+    # Google Fonts. Inline styles are needed because React injects style attrs.
+    # frame-ancestors 'none' supersedes X-Frame-Options for modern browsers.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://api.cohere.com; worker-src 'self' blob:; frame-ancestors 'none'; base-uri 'self'; form-action 'none'; object-src 'none'" always;
+
+    gzip on;
+    gzip_types application/json application/javascript text/css text/plain image/svg+xml;
+    gzip_min_length 1024;
+    gzip_vary on;
+
+    location ~* \.(png|jpg|jpeg|webp|avif|woff2?)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        # Re-emit security headers because add_header doesn't inherit when a
+        # block adds its own Cache-Control header.
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    }
+
+    location /data/ {
+        add_header Cache-Control "public, max-age=300";
+        add_header X-Frame-Options "DENY" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

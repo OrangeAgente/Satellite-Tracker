@@ -8,6 +8,7 @@ export interface PropagationSnapshot {
 }
 
 type Listener = (snap: PropagationSnapshot) => void;
+type TimeProvider = () => number;
 
 export class PropagationClient {
   private worker: Worker;
@@ -17,11 +18,16 @@ export class PropagationClient {
   private pendingTick: number | null = null;
   private tickIntervalMs: number;
   private tickTimer: number | null = null;
+  private timeProvider: TimeProvider = () => Date.now();
 
-  constructor(tickIntervalMs = 500) {
+  constructor(tickIntervalMs = 250) {
     this.tickIntervalMs = tickIntervalMs;
     this.worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
     this.worker.onmessage = (ev) => this.handleMessage(ev);
+  }
+
+  setTimeProvider(fn: TimeProvider) {
+    this.timeProvider = fn;
   }
 
   private handleMessage(ev: MessageEvent) {
@@ -69,8 +75,9 @@ export class PropagationClient {
     if (this.tickTimer != null) return;
     const tick = () => {
       if (this.pendingTick == null) {
-        this.pendingTick = Date.now();
-        this.worker.postMessage({ type: "tick", time: this.pendingTick });
+        const t = this.timeProvider();
+        this.pendingTick = t;
+        this.worker.postMessage({ type: "tick", time: t });
       }
     };
     tick();

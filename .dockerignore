@@ -6,6 +6,4 @@ dist
 .env.*
 npm-debug.log
 .DS_Store
-public/data/satellites.json
-public/data/tle.txt
-public/data/build-info.json
+.design

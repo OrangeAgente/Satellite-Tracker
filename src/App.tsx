@@ -3,10 +3,15 @@ import { useApp, computeVisibleIds } from "./store";
 import { loadDataset } from "./data/loadDataset";
 import { startLiveRefresh } from "./data/refresh";
 import { Scene } from "./globe/Scene";
-import { SearchBar } from "./ui/SearchBar";
+import { TopBar } from "./ui/TopBar";
 import { FilterPanel } from "./ui/FilterPanel";
+import { Catalog } from "./ui/Catalog";
 import { InfoPanel } from "./ui/InfoPanel";
-import { Legend } from "./ui/Legend";
+import { UpcomingPasses } from "./ui/UpcomingPasses";
+import { SatelliteAgent } from "./ui/SatelliteAgent";
+import { HudOverlay } from "./ui/HudOverlay";
+import { Timeline } from "./ui/Timeline";
+import { CompareTray } from "./ui/CompareTray";
 import { PropagationClient } from "./propagation/propagationClient";
 
 export function App() {
@@ -37,7 +42,11 @@ export function App() {
 
   useEffect(() => {
     if (!dataset || dataset.satellites.length === 0) return;
-    const c = new PropagationClient(500);
+    const c = new PropagationClient(250);
+    c.setTimeProvider(() => {
+      const { simTime } = useApp.getState();
+      return simTime ?? Date.now();
+    });
     c.init(dataset.satellites);
     setClient(c);
     return () => {
@@ -63,7 +72,7 @@ export function App() {
         <h1>Couldn't load the dataset</h1>
         <p>{loadError}</p>
         <p className="hint">
-          Run <code>docker compose run --rm app npm run build:data</code> to generate
+          Run <code>docker compose run --rm app npm run build:data</code> to generate{" "}
           <code>public/data/satellites.json</code>, then reload.
         </p>
       </div>
@@ -84,8 +93,8 @@ export function App() {
       <div className="splash error">
         <h1>Dataset is empty</h1>
         <p>
-          <code>public/data/satellites.json</code> was generated but contains no satellites.
-          This usually means the build ran without network access. Run:
+          <code>public/data/satellites.json</code> was generated but contains no satellites. This usually
+          means the build ran without network access. Run:
         </p>
         <pre>docker compose run --rm app npm run build:data</pre>
       </div>
@@ -93,22 +102,27 @@ export function App() {
   }
 
   return (
-    <div className="app">
-      <div className="left-panel">
-        <header className="app-header">
-          <h1>Satellite Tracker</h1>
-          <div className="app-sub">{dataset.count.toLocaleString()} tracked objects</div>
-        </header>
-        <SearchBar satellites={dataset.satellites} />
-        <FilterPanel satellites={dataset.satellites} />
-        <InfoPanel />
+    <div className="ops-root">
+      <TopBar satellites={dataset.satellites} total={dataset.count} visible={visibleIds.size} />
+      <div className="ops-body">
+        <aside className="ops-left">
+          <FilterPanel satellites={dataset.satellites} />
+          <Catalog satellites={dataset.satellites} visibleIds={visibleIds} />
+        </aside>
+        <main className="ops-center">
+          <div className="ops-globe">
+            {client && <Scene satellites={dataset.satellites} visibleIds={visibleIds} client={client} />}
+            <HudOverlay />
+          </div>
+          <CompareTray />
+        </main>
+        <aside className="ops-right">
+          <InfoPanel />
+          <UpcomingPasses satellites={dataset.satellites} />
+          <SatelliteAgent />
+        </aside>
       </div>
-      <div className="globe-wrap">
-        {client && (
-          <Scene satellites={dataset.satellites} visibleIds={visibleIds} client={client} />
-        )}
-        <Legend total={dataset.count} visible={visibleIds.size} />
-      </div>
+      <Timeline />
     </div>
   );
 }

@@ -21,17 +21,17 @@ export function SearchBar({ satellites }: { satellites: Satellite[] }) {
   }, [searchQuery, satellites]);
 
   return (
-    <div className="search">
+    <>
       <input
         type="search"
         value={searchQuery}
-        placeholder="Search name or NORAD id (e.g. ISS, 25544)…"
+        placeholder=">> search id or name"
         onChange={(e) => setSearchQuery(e.target.value)}
         onFocus={() => setFocused(true)}
         onBlur={() => setTimeout(() => setFocused(false), 120)}
       />
       {focused && suggestions.length > 0 && (
-        <ul className="search-suggest">
+        <ul className="ops-search-suggest">
           {suggestions.map((s) => (
             <li
               key={s.noradId}
@@ -40,7 +40,7 @@ export function SearchBar({ satellites }: { satellites: Satellite[] }) {
                 setSearchQuery(s.name);
               }}
             >
-              <span className="sug-name">{s.name}</span>
+              <span>{s.name}</span>
               <span className="sug-meta">
                 #{s.noradId} · {s.orbitClass}
               </span>
@@ -48,6 +48,6 @@ export function SearchBar({ satellites }: { satellites: Satellite[] }) {
           ))}
         </ul>
       )}
-    </div>
+    </>
   );
 }

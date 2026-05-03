@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import type { Dataset, FilterState, OrbitClass, Satellite } from "./types";
+import { DEFAULT_OBSERVER, type Observer } from "./passes/predictor";
+import { matchesUsage } from "./data/usage";
+
+export type PlayRate = 0.5 | 1 | 2 | 4 | 16 | 64;
 
 interface AppState {
   dataset: Dataset | null;
@@ -10,6 +14,15 @@ interface AppState {
   searchQuery: string;
   filters: FilterState;
   lastRefreshAt: string | null;
+
+  pinnedIds: number[];
+  simTime: number | null;
+  playing: boolean;
+  playRate: PlayRate;
+  trackingId: number | null;
+  hudVisible: boolean;
+  observer: Observer;
+
   setDataset: (d: Dataset) => void;
   setLoading: (b: boolean) => void;
   setLoadError: (s: string | null) => void;
@@ -21,6 +34,14 @@ interface AppState {
   clearAllFilters: () => void;
   setLastRefreshAt: (s: string) => void;
   getSatellite: (id: number) => Satellite | undefined;
+
+  togglePin: (id: number) => void;
+  setSimTime: (t: number | null) => void;
+  setPlaying: (b: boolean) => void;
+  setPlayRate: (r: PlayRate) => void;
+  setTrackingId: (id: number | null) => void;
+  toggleHud: () => void;
+  setObserver: (o: Observer) => void;
 }
 
 const emptyFilters = (): FilterState => ({
@@ -40,6 +61,15 @@ export const useApp = create<AppState>((set, get) => ({
   searchQuery: "",
   filters: emptyFilters(),
   lastRefreshAt: null,
+
+  pinnedIds: [],
+  simTime: null,
+  playing: true,
+  playRate: 1,
+  trackingId: null,
+  hudVisible: true,
+  observer: DEFAULT_OBSERVER,
+
   setDataset: (dataset) => set({ dataset, loading: false, loadError: null }),
   setLoading: (loading) => set({ loading }),
   setLoadError: (loadError) => set({ loadError, loading: false }),
@@ -64,6 +94,18 @@ export const useApp = create<AppState>((set, get) => ({
   clearAllFilters: () => set({ filters: emptyFilters() }),
   setLastRefreshAt: (lastRefreshAt) => set({ lastRefreshAt }),
   getSatellite: (id) => get().dataset?.satellites.find((s) => s.noradId === id),
+
+  togglePin: (id) =>
+    set((state) => {
+      const has = state.pinnedIds.includes(id);
+      return { pinnedIds: has ? state.pinnedIds.filter((x) => x !== id) : [...state.pinnedIds, id] };
+    }),
+  setSimTime: (simTime) => set({ simTime }),
+  setPlaying: (playing) => set({ playing }),
+  setPlayRate: (playRate) => set({ playRate }),
+  setTrackingId: (trackingId) => set({ trackingId }),
+  toggleHud: () => set((s) => ({ hudVisible: !s.hudVisible })),
+  setObserver: (observer) => set({ observer }),
 }));
 
 /** Derived: the set of NORAD ids that currently match filters + search. */
@@ -78,17 +120,7 @@ export function computeVisibleIds(state: AppState): Set<number> {
   const anyType = filters.objectTypes.size > 0;
   const out = new Set<number>();
   for (const s of dataset.satellites) {
-    if (anyUser) {
-      const users = (s.ucs?.users || "").toLowerCase();
-      let match = false;
-      for (const u of filters.users) {
-        if (users.includes(u.toLowerCase())) {
-          match = true;
-          break;
-        }
-      }
-      if (!match) continue;
-    }
+    if (anyUser && !matchesUsage(s, filters.users)) continue;
     if (anyCountry) {
       const country = (s.ucs?.operatorCountry || s.country || "").toLowerCase();
       let match = false;
