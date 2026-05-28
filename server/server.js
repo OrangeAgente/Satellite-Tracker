@@ -14,8 +14,8 @@ const PORT = Number(process.env.PORT || 8080);
 const HOST = process.env.HOST || "0.0.0.0";
 const STATIC_DIR = path.resolve(process.env.STATIC_DIR || path.join(__dirname, "..", "dist"));
 const COHERE_KEY = process.env.COHERE_API_KEY || "";
-const ALLOWED_MODELS = new Set(["command-a-03-2025"]);
-const DEFAULT_MODEL = "command-a-03-2025";
+const ALLOWED_MODELS = new Set(["command-a-plus-05-2026"]);
+const DEFAULT_MODEL = "command-a-plus-05-2026";
 
 const MAX_BODY_BYTES = 200_000;
 const MAX_MESSAGES = 50;

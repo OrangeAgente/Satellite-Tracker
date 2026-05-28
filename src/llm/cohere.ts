@@ -2,7 +2,7 @@ const COHERE_URL = "https://api.cohere.com/v2/chat";
 const PROXY_URL = "/api/chat";
 const KEY_STORAGE = "cohere_api_key";
 
-export const DEFAULT_MODEL = "command-a-03-2025";
+export const DEFAULT_MODEL = "command-a-plus-05-2026";
 
 export type KeyPersistence = "session" | "local";
 
