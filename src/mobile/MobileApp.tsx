@@ -6,6 +6,7 @@ import type { Satellite } from "../types";
 import type { PropagationClient } from "../propagation/propagationClient";
 import { MobileHud } from "./MobileHud";
 import { InfoSheet } from "./InfoSheet";
+import { CatalogPanel } from "./CatalogPanel";
 import { fmtUTC, fmtOffset } from "./format";
 
 const ACCENT = "#ffb547";
@@ -75,6 +76,13 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
     filters.orbitClasses.size + filters.users.size + filters.objectTypes.size;
   const simDisplay = simTime == null ? "LIVE" : fmtOffset(simTime - Date.now());
 
+  const pickSat = (id: number) => {
+    setSelectedId(id);
+    setTab("globe");
+    setSheetExpanded(false);
+    setSearchOpen(false);
+  };
+
   return (
     <div className="m-root">
       {/* globe backdrop */}
@@ -130,7 +138,7 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
       )}
 
       {/* panels (filled in by later tasks) */}
-      {tab === "catalog" && <PanelStub title="Catalog" />}
+      {tab === "catalog" && <CatalogPanel satellites={satellites} visibleIds={visibleIds} onPick={pickSat} />}
       {tab === "passes" && <PanelStub title="Upcoming passes" />}
       {tab === "agent" && <PanelStub title="Agent" />}
 
