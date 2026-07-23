@@ -4,7 +4,11 @@
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+# Prefer a reproducible `npm ci`, but fall back to `npm install` if the lockfile
+# doesn't satisfy this image's npm — the lock may be written by a newer local
+# npm (e.g. 12.x) than the one bundled with node:20-alpine (10.8.x), which can
+# read a valid lock as out of sync. `npm install` reconciles and installs.
+RUN if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
 
 # ---- dev: runs the Vite dev server with source bind-mounted at runtime ----
 FROM node:20-alpine AS dev
