@@ -8,6 +8,8 @@ import { MobileHud } from "./MobileHud";
 import { InfoSheet } from "./InfoSheet";
 import { CatalogPanel } from "./CatalogPanel";
 import { PassesPanel } from "./PassesPanel";
+import { AgentPanel } from "./AgentPanel";
+import { TimelineSheet } from "./TimelineSheet";
 import { fmtUTC, fmtOffset } from "./format";
 
 const ACCENT = "#ffb547";
@@ -141,7 +143,7 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
       {/* panels (filled in by later tasks) */}
       {tab === "catalog" && <CatalogPanel satellites={satellites} visibleIds={visibleIds} onPick={pickSat} />}
       {tab === "passes" && <PassesPanel satellites={satellites} />}
-      {tab === "agent" && <PanelStub title="Agent" />}
+      {tab === "agent" && <AgentPanel sat={sel} />}
 
       {/* tab bar */}
       <nav className="m-tabs">
@@ -156,18 +158,10 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
         ))}
       </nav>
 
-      {/* placeholders wired in later tasks: InfoSheet, CompareTray, TimelineSheet, SearchOverlay */}
-      {timelineOpen && <div className="m-scrim" onClick={() => setTimelineOpen(false)} />}
+      {timelineOpen && <TimelineSheet onClose={() => setTimelineOpen(false)} />}
+
+      {/* placeholder wired in Task 9: SearchOverlay */}
       {searchOpen && <div className="m-search-ov" onClick={() => setSearchOpen(false)} />}
     </div>
-  );
-}
-
-function PanelStub({ title }: { title: string }) {
-  return (
-    <section className="m-panel">
-      <div className="m-panel-h"><span>{title}</span></div>
-      <div className="m-more">…</div>
-    </section>
   );
 }
