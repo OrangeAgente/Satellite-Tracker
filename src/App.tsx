@@ -13,6 +13,8 @@ import { HudOverlay } from "./ui/HudOverlay";
 import { Timeline } from "./ui/Timeline";
 import { CompareTray } from "./ui/CompareTray";
 import { PropagationClient } from "./propagation/propagationClient";
+import { useIsMobile } from "./hooks/useIsMobile";
+import { MobileApp } from "./mobile/MobileApp";
 
 export function App() {
   const dataset = useApp((s) => s.dataset);
@@ -25,6 +27,7 @@ export function App() {
   const setLastRefreshAt = useApp((s) => s.setLastRefreshAt);
 
   const [client, setClient] = useState<PropagationClient | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     let cancelled = false;
@@ -99,6 +102,10 @@ export function App() {
         <pre>docker compose run --rm app npm run build:data</pre>
       </div>
     );
+  }
+
+  if (isMobile) {
+    return <MobileApp satellites={dataset.satellites} visibleIds={visibleIds} client={client} />;
   }
 
   return (
