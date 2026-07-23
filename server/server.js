@@ -234,7 +234,17 @@ async function handleChat(req, res) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({ model, messages: payload.messages, stream: true }),
+      // Command A+ is a reasoning model: with thinking enabled it streams a long
+      // internal "thinking" phase (content.type=thinking) before any answer text.
+      // The client surfaces only answer text, so open-ended prompts appear to hang
+      // for a minute+. These answers are grounded in the system prompt, so we turn
+      // reasoning off for fast, direct responses.
+      body: JSON.stringify({
+        model,
+        messages: payload.messages,
+        stream: true,
+        thinking: { type: "disabled" },
+      }),
     });
   } catch (err) {
     console.error("[chat] upstream fetch failed:", err);
