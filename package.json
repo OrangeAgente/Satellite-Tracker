@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "build:data": "node scripts/build-dataset.mjs",
     "preview": "vite preview --host 0.0.0.0 --port 5173",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.0",
@@ -20,12 +23,18 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@types/three": "^0.169.0",
     "@vitejs/plugin-react": "^4.3.3",
+    "jsdom": "^29.1.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.10",
+    "vitest": "^4.1.10",
     "xlsx": "0.18.5"
   }
 }

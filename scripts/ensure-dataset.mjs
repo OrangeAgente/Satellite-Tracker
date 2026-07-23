@@ -15,12 +15,11 @@
 import { promises as fs } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
-const OUT = path.resolve("public/data/satellites.json");
-const SEED = path.resolve("public/data/satellites.seed.json");
-const SEED_GZ = path.resolve("public/data/satellites.seed.json.gz");
+const EMPTY = JSON.stringify({ generatedAt: "", count: 0, categoryGroups: [], satellites: [] });
 
-function countOf(text) {
+export function countOf(text) {
   try {
     const d = JSON.parse(text);
     return typeof d.count === "number" ? d.count : d.satellites?.length ?? 0;
@@ -29,42 +28,57 @@ function countOf(text) {
   }
 }
 
-async function readOut() {
+/**
+ * Pure decision: given the freshly built dataset text and a seed text (either
+ * may be empty/invalid), choose which dataset to ship and why.
+ * @returns {{ source: "fresh"|"seed"|"placeholder", json: string }}
+ */
+export function pickDataset(freshText, seedText) {
+  if (countOf(freshText) > 0) return { source: "fresh", json: freshText };
+  if (countOf(seedText) > 0) return { source: "seed", json: seedText };
+  return { source: "placeholder", json: EMPTY };
+}
+
+async function readText(p) {
   try {
-    return await fs.readFile(OUT, "utf8");
+    return await fs.readFile(p, "utf8");
   } catch {
     return "";
   }
 }
 
-async function readSeed() {
-  // Prefer an already-decompressed seed, else the gzipped one.
+async function readSeed(seedPath, seedGzPath) {
+  const raw = await readText(seedPath);
+  if (raw) return raw;
   try {
-    return await fs.readFile(SEED, "utf8");
-  } catch {
-    /* fall through */
-  }
-  try {
-    return gunzipSync(await fs.readFile(SEED_GZ)).toString("utf8");
+    return gunzipSync(await fs.readFile(seedGzPath)).toString("utf8");
   } catch {
     return "";
   }
 }
 
-const fresh = countOf(await readOut());
-if (fresh > 0) {
-  console.log(`[ensure-dataset] dataset ok (${fresh} satellites)`);
-} else {
-  const seed = await readSeed();
-  const seeded = countOf(seed);
-  if (seeded > 0) {
-    await fs.writeFile(OUT, seed);
-    console.log(`[ensure-dataset] build:data empty; restored bundled seed (${seeded} satellites)`);
-  } else {
-    console.log("[ensure-dataset] no dataset available; writing empty placeholder");
-    await fs.writeFile(
-      OUT,
-      JSON.stringify({ generatedAt: "", count: 0, categoryGroups: [], satellites: [] }),
-    );
-  }
+export async function ensureDataset(opts = {}) {
+  const dir = path.resolve("public/data");
+  const outPath = opts.outPath ?? path.join(dir, "satellites.json");
+  const seedPath = opts.seedPath ?? path.join(dir, "satellites.seed.json");
+  const seedGzPath = opts.seedGzPath ?? path.join(dir, "satellites.seed.json.gz");
+
+  const fresh = await readText(outPath);
+  const seed = await readSeed(seedPath, seedGzPath);
+  const { source, json } = pickDataset(fresh, seed);
+  if (source !== "fresh") await fs.writeFile(outPath, json);
+  return { source, count: countOf(json) };
+}
+
+// Run as a CLI only when invoked directly (not when imported by tests).
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  ensureDataset().then(({ source, count }) => {
+    const msg =
+      source === "fresh"
+        ? `dataset ok (${count} satellites)`
+        : source === "seed"
+          ? `build:data empty; restored bundled seed (${count} satellites)`
+          : "no dataset available; writing empty placeholder";
+    console.log(`[ensure-dataset] ${msg}`);
+  });
 }
