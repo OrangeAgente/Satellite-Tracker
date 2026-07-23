@@ -1,0 +1,74 @@
+import type { Satellite } from "../types";
+import { inferUsage } from "../data/usage";
+
+export const STATIC_PROMPTS: string[] = [
+  "Tell me more about this satellite",
+  "What does this satellite do?",
+  "Describe the launch",
+  "What's its orbital regime?",
+  "Who operates it?",
+];
+
+export function buildDynamicPrompts(sat: Satellite): string[] {
+  const out: string[] = [];
+  const cats = sat.categories;
+  const name = sat.name;
+  if (cats.includes("starlink")) out.push("How does this fit into the Starlink constellation?");
+  if (cats.includes("gps-ops")) out.push("What's its role in the GPS constellation?");
+  if (cats.includes("galileo")) out.push("Where does it sit in the Galileo constellation?");
+  if (cats.includes("weather") || cats.includes("noaa") || cats.includes("goes")) {
+    out.push("What weather products does it provide?");
+  }
+  if (cats.includes("amateur")) out.push("How can I work this satellite with amateur radio?");
+  if (cats.includes("stations") || /ISS|TIANGONG|ZARYA/i.test(name)) {
+    out.push("Who's currently aboard?");
+  }
+  if (sat.objectType === "DEB") out.push("What event created this debris?");
+  if (sat.objectType === "R/B") out.push("What was the upper stage's mission?");
+  if (sat.orbitClass === "GEO") out.push("What's the operational slot longitude?");
+  if (cats.includes("military")) out.push("What's publicly known about its mission?");
+  return out;
+}
+
+export function buildSystemPrompt(sat: Satellite): string {
+  const ucs = sat.ucs;
+  const usage = [...inferUsage(sat)].join(", ");
+  const lines: string[] = [
+    "You are SATCOM·OPS, an expert in satellites, orbital mechanics, and space situational awareness.",
+    "Answer questions about a specific satellite the user is observing. Be precise, concise, and grounded in the facts below.",
+    "When uncertain, say so plainly. Distinguish public, well-documented facts from informed inference.",
+    "Use SI units and standard orbital terminology. Format short answers tightly; use bullets only when helpful.",
+    "",
+    "SELECTED SATELLITE",
+    `  name: ${sat.name}`,
+    `  norad id: ${sat.noradId}`,
+    `  intl designator: ${sat.intlDes || "unknown"}`,
+    `  object type: ${sat.objectType}`,
+    `  country: ${sat.country || "unknown"}`,
+    `  orbit class: ${sat.orbitClass}`,
+    sat.periodMin != null ? `  period: ${sat.periodMin.toFixed(1)} min` : "  period: unknown",
+    sat.inclinationDeg != null ? `  inclination: ${sat.inclinationDeg.toFixed(2)}°` : "  inclination: unknown",
+    sat.apogeeKm != null ? `  apogee: ${sat.apogeeKm} km` : "  apogee: unknown",
+    sat.perigeeKm != null ? `  perigee: ${sat.perigeeKm} km` : "  perigee: unknown",
+    `  launch date: ${sat.launchDate || "unknown"}`,
+    `  inferred usage: ${usage}`,
+    sat.categories.length > 0 ? `  categories: ${sat.categories.join(", ")}` : "",
+  ];
+  if (ucs) {
+    lines.push("");
+    lines.push("UCS METADATA");
+    if (ucs.operator) lines.push(`  operator: ${ucs.operator}`);
+    if (ucs.operatorCountry) lines.push(`  operator country: ${ucs.operatorCountry}`);
+    if (ucs.users) lines.push(`  users: ${ucs.users}`);
+    if (ucs.purpose) lines.push(`  purpose: ${ucs.purpose}`);
+    if (ucs.detailedPurpose) lines.push(`  detailed purpose: ${ucs.detailedPurpose}`);
+    if (ucs.contractor) lines.push(`  contractor: ${ucs.contractor}`);
+    if (ucs.launchMassKg) lines.push(`  launch mass: ${ucs.launchMassKg} kg`);
+    if (ucs.dryMassKg) lines.push(`  dry mass: ${ucs.dryMassKg} kg`);
+    if (ucs.powerW) lines.push(`  power: ${ucs.powerW} W`);
+    if (ucs.expectedLifetimeYears) lines.push(`  expected lifetime: ${ucs.expectedLifetimeYears} yr`);
+    if (ucs.launchSite) lines.push(`  launch site: ${ucs.launchSite}`);
+    if (ucs.launchVehicle) lines.push(`  launch vehicle: ${ucs.launchVehicle}`);
+  }
+  return lines.filter(Boolean).join("\n");
+}
