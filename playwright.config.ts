@@ -16,7 +16,14 @@ export default defineConfig({
     trace: "on-first-retry",
     ...devices["Pixel 5"],
   },
-  projects: [{ name: "mobile-chromium", use: { ...devices["Pixel 5"] } }],
+  projects: [
+    { name: "mobile", testMatch: /mobile\.spec\.ts$/, use: { ...devices["Pixel 5"] } },
+    {
+      name: "desktop",
+      testMatch: /desktop\.spec\.ts$/,
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1360, height: 900 } },
+    },
+  ],
   webServer: {
     command: "npm run build && npm run preview",
     url: "http://localhost:5173",
