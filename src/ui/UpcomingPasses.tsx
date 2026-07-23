@@ -1,9 +1,7 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../store";
-import { compassDir, predictNextPasses, predictPasses } from "../passes/predictor";
+import { compassDir, pickPassPool, predictNextPasses, predictPasses } from "../passes/predictor";
 import type { Satellite } from "../types";
-
-const VISIBLE_FALLBACKS = ["ISS", "HUBBLE", "TIANGONG", "STARLINK", "NOAA"];
 
 export function UpcomingPasses({ satellites }: { satellites: Satellite[] }) {
   const sel = useApp((s) => (s.selectedId != null ? s.getSatellite(s.selectedId) : undefined));
@@ -16,7 +14,7 @@ export function UpcomingPasses({ satellites }: { satellites: Satellite[] }) {
     if (sel) {
       return predictPasses(sel, observer, from, 24, 6);
     }
-    const fallbackPool = pickFallbacks(satellites, 12);
+    const fallbackPool = pickPassPool(satellites, 12);
     return predictNextPasses(fallbackPool, observer, from, 12, 6);
   }, [sel, satellites, observer]);
 
@@ -140,31 +138,6 @@ function requestGeo(setObserver: (o: { latDeg: number; lonDeg: number; altKm: nu
     () => {},
     { timeout: 8000 },
   );
-}
-
-function pickFallbacks(satellites: Satellite[], n: number) {
-  const out: Satellite[] = [];
-  const seen = new Set<number>();
-  for (const needle of VISIBLE_FALLBACKS) {
-    for (const s of satellites) {
-      if (seen.has(s.noradId)) continue;
-      if (s.name.toUpperCase().includes(needle)) {
-        out.push(s);
-        seen.add(s.noradId);
-        if (out.length >= n) return out;
-        break;
-      }
-    }
-  }
-  for (const s of satellites) {
-    if (out.length >= n) break;
-    if (seen.has(s.noradId)) continue;
-    if (s.orbitClass === "LEO" && s.objectType === "PAY") {
-      out.push(s);
-      seen.add(s.noradId);
-    }
-  }
-  return out;
 }
 
 function pad(n: number) {
