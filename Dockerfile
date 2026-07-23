@@ -26,15 +26,15 @@ FROM node:20-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
 COPY . .
-# Snapshot any bundled dataset (uploaded via .railwayignore) as a seed, try to
-# refresh from CelesTrak (best-effort — the build network may be blocked), then
-# reconcile so we never ship an empty dataset when a seed is available.
+# Try to refresh the dataset from CelesTrak (best-effort — the build network may
+# be blocked), then reconcile via ensure-dataset, which falls back to the
+# git-tracked gzipped seed so we never deploy an empty dataset. Drop the seed
+# before `npm run build` so it isn't copied into dist/.
 RUN mkdir -p public/data \
- && cp -f public/data/satellites.json public/data/satellites.seed.json 2>/dev/null || true \
  && (npm run build:data && echo "[build] dataset refreshed from CelesTrak" \
        || echo "[build] build:data failed; falling back to bundled seed") \
  && node scripts/ensure-dataset.mjs \
- && rm -f public/data/satellites.seed.json \
+ && rm -f public/data/satellites.seed.json public/data/satellites.seed.json.gz \
  && npm run build
 
 # ---- prod: tiny Node server (static + Cohere proxy), zero npm deps ----
