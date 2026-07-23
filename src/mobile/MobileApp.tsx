@@ -10,6 +10,8 @@ import { CatalogPanel } from "./CatalogPanel";
 import { PassesPanel } from "./PassesPanel";
 import { AgentPanel } from "./AgentPanel";
 import { TimelineSheet } from "./TimelineSheet";
+import { SearchOverlay } from "./SearchOverlay";
+import { CompareTray } from "./CompareTray";
 import { fmtUTC, fmtOffset } from "./format";
 
 const ACCENT = "#ffb547";
@@ -67,6 +69,7 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
   const setSelectedId = useApp((s) => s.setSelectedId);
   const togglePin = useApp((s) => s.togglePin);
   const setTrackingId = useApp((s) => s.setTrackingId);
+  const setSearchQuery = useApp((s) => s.setSearchQuery);
 
   useSimClock();
 
@@ -84,6 +87,12 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
     setTab("globe");
     setSheetExpanded(false);
     setSearchOpen(false);
+    setSearchQuery("");
+  };
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
   };
 
   return (
@@ -145,6 +154,9 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
       {tab === "passes" && <PassesPanel satellites={satellites} />}
       {tab === "agent" && <AgentPanel sat={sel} />}
 
+      {/* compare tray — globe tab, pins present, no sheet covering it */}
+      {tab === "globe" && !sel && pinnedIds.length > 0 && <CompareTray onPick={pickSat} />}
+
       {/* tab bar */}
       <nav className="m-tabs">
         {TABS.map((t) => (
@@ -159,9 +171,7 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
       </nav>
 
       {timelineOpen && <TimelineSheet onClose={() => setTimelineOpen(false)} />}
-
-      {/* placeholder wired in Task 9: SearchOverlay */}
-      {searchOpen && <div className="m-search-ov" onClick={() => setSearchOpen(false)} />}
+      {searchOpen && <SearchOverlay satellites={satellites} onPick={pickSat} onClose={closeSearch} />}
     </div>
   );
 }
