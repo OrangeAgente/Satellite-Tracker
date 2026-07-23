@@ -63,7 +63,10 @@ export function InfoSheet({
 
   return (
     <section className={"m-sheet" + (expanded ? " expanded" : "")}>
-      <button className="m-handle" onClick={onToggle}><span /></button>
+      <button className="m-handle" onClick={onToggle} aria-label={expanded ? "Collapse" : "Expand"}>
+        <span className="bar" />
+        <span className="chev">{expanded ? "▾" : "▴"}</span>
+      </button>
       <div className="m-sheet-head" onClick={onToggle}>
         <span className="m-orbtag" style={{ borderColor: orbCol, color: orbCol }}>{sat.orbitClass}</span>
         <div className="m-sheet-title">
@@ -80,12 +83,10 @@ export function InfoSheet({
       </div>
 
       <div className="m-sheet-scroll">
-        <div className="m-gt"><MiniGroundTrack sat={sat} atMs={atMs} /></div>
-
         <div className="m-actions">
           <button className={pinned ? "on" : ""} onClick={onPin}>{pinned ? "PINNED" : "PIN"}</button>
           <button className={tracking ? "on" : ""} onClick={onTrack}>TRACK</button>
-          <button onClick={() => { if (!expanded) onExpand(); }}>INFO</button>
+          <button className={expanded ? "on" : ""} onClick={onToggle}>INFO</button>
           <button className={showTle ? "on" : ""} onClick={toggleTle}>TLE</button>
         </div>
 
@@ -94,6 +95,14 @@ export function InfoSheet({
             <pre>{sat.tleLine1}{"\n"}{sat.tleLine2}</pre>
           </div>
         )}
+
+        <div className="m-gt">
+          <div className="m-gt-h">
+            <span className="lbl">Ground track</span>
+            <span className="leg"><b>◍</b> position now · ~1 orbit</span>
+          </div>
+          <MiniGroundTrack sat={sat} atMs={atMs} />
+        </div>
 
         <div className="m-sec-h">Mission</div>
         {mission.map(([k, v]) => (v ? (

@@ -60,7 +60,7 @@ export function TimelineSheet({ onClose }: { onClose: () => void }) {
     <>
       <div className="m-scrim" onClick={onClose} />
       <section className="m-timeline">
-        <button className="m-handle" onClick={onClose}><span /></button>
+        <button className="m-handle" onClick={onClose}><span className="bar" /></button>
         <div className="m-panel-h">
           <span>Timeline · SIM {isLive ? "LIVE" : fmtOffset(offsetFromNow)}</span>
           <button className={"m-clear" + (isLive ? " on" : "")} onClick={goLive}>LIVE</button>
