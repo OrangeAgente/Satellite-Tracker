@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Guarantee a non-empty satellites.json after `build:data` in the Docker build.
  *
