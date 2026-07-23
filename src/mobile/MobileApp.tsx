@@ -149,10 +149,13 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
         />
       )}
 
-      {/* panels (filled in by later tasks) */}
-      {tab === "catalog" && <CatalogPanel satellites={satellites} visibleIds={visibleIds} onPick={pickSat} />}
-      {tab === "passes" && <PassesPanel satellites={satellites} />}
-      {tab === "agent" && <AgentPanel sat={sel} />}
+      {/* tap the visible globe above a data panel to dismiss it */}
+      {tab !== "globe" && !searchOpen && <div className="m-dismiss" onClick={() => setTab("globe")} />}
+
+      {/* panels */}
+      {tab === "catalog" && <CatalogPanel satellites={satellites} visibleIds={visibleIds} onPick={pickSat} onClose={() => setTab("globe")} />}
+      {tab === "passes" && <PassesPanel satellites={satellites} onClose={() => setTab("globe")} />}
+      {tab === "agent" && <AgentPanel sat={sel} onClose={() => setTab("globe")} />}
 
       {/* compare tray — globe tab, pins present, no sheet covering it */}
       {tab === "globe" && !sel && pinnedIds.length > 0 && <CompareTray onPick={pickSat} />}

@@ -12,9 +12,10 @@ interface Props {
   satellites: Satellite[];
   visibleIds: Set<number>;
   onPick: (id: number) => void;
+  onClose: () => void;
 }
 
-export function CatalogPanel({ satellites, visibleIds, onPick }: Props) {
+export function CatalogPanel({ satellites, visibleIds, onPick, onClose }: Props) {
   const selectedId = useApp((s) => s.selectedId);
   const pinnedIds = useApp((s) => s.pinnedIds);
   const filters = useApp((s) => s.filters);
@@ -38,7 +39,10 @@ export function CatalogPanel({ satellites, visibleIds, onPick }: Props) {
     <section className="m-panel">
       <div className="m-panel-h">
         <span>Catalog</span>
-        <span className="right">{visibleIds.size.toLocaleString()} / {satellites.length.toLocaleString()}</span>
+        <div className="m-head-actions">
+          <span className="right">{visibleIds.size.toLocaleString()} / {satellites.length.toLocaleString()}</span>
+          <button className="m-panel-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
       </div>
 
       <div className="m-filterbar">

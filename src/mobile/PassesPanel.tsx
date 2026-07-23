@@ -5,7 +5,7 @@ import { compassDir, pickPassPool, predictNextPasses, predictPasses } from "../p
 import type { Observer } from "../passes/predictor";
 import { fmtLocalHMS } from "./format";
 
-export function PassesPanel({ satellites }: { satellites: Satellite[] }) {
+export function PassesPanel({ satellites, onClose }: { satellites: Satellite[]; onClose: () => void }) {
   const sel = useApp((s) => (s.selectedId != null ? s.getSatellite(s.selectedId) : undefined));
   const observer = useApp((s) => s.observer);
   const setObserver = useApp((s) => s.setObserver);
@@ -21,9 +21,12 @@ export function PassesPanel({ satellites }: { satellites: Satellite[] }) {
     <section className="m-panel">
       <div className="m-panel-h">
         <span>Upcoming passes</span>
-        <button className="m-clear" onClick={() => setEditing((e) => !e)}>
-          {editing ? "DONE" : `${observer.latDeg.toFixed(2)},${observer.lonDeg.toFixed(2)}`}
-        </button>
+        <div className="m-head-actions">
+          <button className="m-clear" onClick={() => setEditing((e) => !e)}>
+            {editing ? "DONE" : `${observer.latDeg.toFixed(2)},${observer.lonDeg.toFixed(2)}`}
+          </button>
+          <button className="m-panel-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
       </div>
 
       {editing && (

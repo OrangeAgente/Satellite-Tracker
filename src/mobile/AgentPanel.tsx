@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Satellite } from "../types";
 import { useAgentConversation } from "../agent/useAgentConversation";
 
-export function AgentPanel({ sat }: { sat: Satellite | undefined }) {
+export function AgentPanel({ sat, onClose }: { sat: Satellite | undefined; onClose: () => void }) {
   const { turns, streaming, ready, proxyOnly, apiKey, prompts, send, cancel, reset, setKey } =
     useAgentConversation(sat);
   const [input, setInput] = useState("");
@@ -18,7 +18,10 @@ export function AgentPanel({ sat }: { sat: Satellite | undefined }) {
   if (!sat) {
     return (
       <section className="m-panel">
-        <div className="m-panel-h"><span>Agent</span></div>
+        <div className="m-panel-h">
+          <span>Agent</span>
+          <button className="m-panel-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
         <div className="m-agent-empty">
           Select a satellite on the globe or in the catalog to query SATCOM·OPS about it.
         </div>
@@ -39,7 +42,10 @@ export function AgentPanel({ sat }: { sat: Satellite | undefined }) {
     <section className="m-panel">
       <div className="m-panel-h">
         <span>Agent · {sat.name}</span>
-        {turns.length > 0 && <button className="m-clear" onClick={reset}>RESET</button>}
+        <div className="m-head-actions">
+          {turns.length > 0 && <button className="m-clear" onClick={reset}>RESET</button>}
+          <button className="m-panel-x" onClick={onClose} aria-label="Close">×</button>
+        </div>
       </div>
 
       {!ready && !proxyOnly ? (
