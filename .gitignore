@@ -13,3 +13,7 @@ public/data/satellites.seed.json
 *.tsbuildinfo
 .design/
 .railway/
+test-results/
+playwright-report/
+.playwright/
+.last-run.json

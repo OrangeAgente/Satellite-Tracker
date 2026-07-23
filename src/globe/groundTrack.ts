@@ -12,7 +12,12 @@ function geodeticAt(rec: satellite.SatRec, date: Date): GeoPoint | null {
   if (!pos) return null;
   const gmst = satellite.gstime(date);
   const gd = satellite.eciToGeodetic(pos, gmst);
-  return { lat: satellite.degreesLat(gd.latitude), lon: satellite.degreesLong(gd.longitude) };
+  const lat = satellite.degreesLat(gd.latitude);
+  const lon = satellite.degreesLong(gd.longitude);
+  // A malformed TLE parses without error but propagates to NaN — reject it so
+  // the caller gets [] / null instead of NaN points that break the SVG.
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { lat, lon };
 }
 
 /**
