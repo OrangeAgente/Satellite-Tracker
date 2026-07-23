@@ -234,16 +234,17 @@ async function handleChat(req, res) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      // Command A+ is a reasoning model: with thinking enabled it streams a long
-      // internal "thinking" phase (content.type=thinking) before any answer text.
-      // The client surfaces only answer text, so open-ended prompts appear to hang
-      // for a minute+. These answers are grounded in the system prompt, so we turn
-      // reasoning off for fast, direct responses.
+      // Command A+ is a reasoning model. Left unbounded, open-ended prompts (e.g.
+      // "Tell me more about this satellite") spend a minute+ in the hidden
+      // "thinking" phase before any answer text — looking like a hang. Fully
+      // disabling reasoning (thinking:{type:"disabled"}) makes the model emit
+      // invalid tool calls (422 INVALID_TOOL_GENERATION) for most prompts. So we
+      // keep reasoning on but cap it to a small token budget for prompt answers.
       body: JSON.stringify({
         model,
         messages: payload.messages,
         stream: true,
-        thinking: { type: "disabled" },
+        thinking: { token_budget: 256 },
       }),
     });
   } catch (err) {
