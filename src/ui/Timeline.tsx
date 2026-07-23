@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useApp } from "../store";
 import type { PlayRate } from "../store";
+import { useSimClock } from "../hooks/useSimClock";
 
 const SPEEDS: PlayRate[] = [0.5, 1, 2, 4, 16, 64];
 const WINDOW_MS = 4 * 60 * 60 * 1000;
@@ -15,27 +16,8 @@ export function Timeline() {
 
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Drive simTime forward when in sim mode + playing. Use a wall-clock base so
-  // changing the rate or pausing/resuming doesn't drift.
-  const baseRef = useRef<{ wall: number; sim: number } | null>(null);
-  useEffect(() => {
-    if (simTime == null || !playing) {
-      baseRef.current = null;
-      return;
-    }
-    baseRef.current = { wall: performance.now(), sim: simTime };
-    let raf = 0;
-    const step = () => {
-      const base = baseRef.current;
-      if (!base) return;
-      const next = base.sim + (performance.now() - base.wall) * playRate;
-      useApp.setState({ simTime: next });
-      raf = window.requestAnimationFrame(step);
-    };
-    raf = window.requestAnimationFrame(step);
-    return () => window.cancelAnimationFrame(raf);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, playRate, simTime != null]);
+  // Advance simTime forward while in sim mode + playing.
+  useSimClock();
 
   const now = Date.now();
   const display = simTime ?? now;
