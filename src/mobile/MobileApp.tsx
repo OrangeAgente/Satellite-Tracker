@@ -5,6 +5,7 @@ import { Scene } from "../globe/Scene";
 import type { Satellite } from "../types";
 import type { PropagationClient } from "../propagation/propagationClient";
 import { MobileHud } from "./MobileHud";
+import { InfoSheet } from "./InfoSheet";
 import { fmtUTC, fmtOffset } from "./format";
 
 const ACCENT = "#ffb547";
@@ -50,12 +51,18 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
   const [tab, setTab] = useState<MobileTab>("globe");
   const [searchOpen, setSearchOpen] = useState(false);
   const [timelineOpen, setTimelineOpen] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   const sel = useApp((s) => (s.selectedId != null ? s.getSatellite(s.selectedId) : undefined));
   const filters = useApp((s) => s.filters);
   const simTime = useApp((s) => s.simTime);
   const playRate = useApp((s) => s.playRate);
+  const pinnedIds = useApp((s) => s.pinnedIds);
+  const trackingId = useApp((s) => s.trackingId);
+  const setSelectedId = useApp((s) => s.setSelectedId);
+  const togglePin = useApp((s) => s.togglePin);
+  const setTrackingId = useApp((s) => s.setTrackingId);
 
   useSimClock();
 
@@ -105,6 +112,23 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
         </button>
       )}
 
+      {/* info sheet — globe tab with a selection */}
+      {tab === "globe" && sel && (
+        <InfoSheet
+          sat={sel}
+          expanded={sheetExpanded}
+          onToggle={() => setSheetExpanded((e) => !e)}
+          onExpand={() => setSheetExpanded(true)}
+          onClose={() => setSelectedId(null)}
+          pinned={pinnedIds.includes(sel.noradId)}
+          onPin={() => togglePin(sel.noradId)}
+          tracking={trackingId === sel.noradId}
+          onTrack={() => setTrackingId(trackingId === sel.noradId ? null : sel.noradId)}
+          onAgent={() => { setTab("agent"); setSheetExpanded(false); }}
+          atMs={simTime ?? now}
+        />
+      )}
+
       {/* panels (filled in by later tasks) */}
       {tab === "catalog" && <PanelStub title="Catalog" />}
       {tab === "passes" && <PanelStub title="Upcoming passes" />}
@@ -126,7 +150,6 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
       {/* placeholders wired in later tasks: InfoSheet, CompareTray, TimelineSheet, SearchOverlay */}
       {timelineOpen && <div className="m-scrim" onClick={() => setTimelineOpen(false)} />}
       {searchOpen && <div className="m-search-ov" onClick={() => setSearchOpen(false)} />}
-      {sel && null}
     </div>
   );
 }
