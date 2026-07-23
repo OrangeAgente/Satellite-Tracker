@@ -7,6 +7,7 @@ dist
 public/data/satellites.json
 public/data/tle.txt
 public/data/build-info.json
+public/data/satellites.seed.json
 .DS_Store
 *.log
 *.tsbuildinfo
