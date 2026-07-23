@@ -1,0 +1,17 @@
+# Upload rules for `railway up`. When present, Railway uses this instead of
+# .gitignore. Unlike .gitignore we DO upload public/data/* so the locally-built
+# dataset ships as a bundled fallback — the Railway build environment can't
+# always reach CelesTrak, and without a bundled dataset the site would deploy
+# empty. Build the dataset locally (`npm run build:data`) before `railway up`.
+node_modules
+.git
+dist
+.vite
+.env
+.env.*
+.DS_Store
+*.log
+*.tsbuildinfo
+.design/
+.railway/
+docs/
