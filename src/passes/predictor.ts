@@ -125,3 +125,32 @@ export function compassDir(azDeg: number): string {
   const dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
   return dirs[Math.round(((azDeg % 360) + 360) % 360 / 45) % 8];
 }
+
+const VISIBLE_FALLBACKS = ["ISS", "HUBBLE", "TIANGONG", "STARLINK", "NOAA"];
+
+/** A small pool of bright/known LEO payloads to show fleet passes for when no
+ * satellite is selected. Shared by the desktop and mobile passes panels. */
+export function pickPassPool(satellites: Satellite[], n: number): Satellite[] {
+  const out: Satellite[] = [];
+  const seen = new Set<number>();
+  for (const needle of VISIBLE_FALLBACKS) {
+    for (const s of satellites) {
+      if (seen.has(s.noradId)) continue;
+      if (s.name.toUpperCase().includes(needle)) {
+        out.push(s);
+        seen.add(s.noradId);
+        if (out.length >= n) return out;
+        break;
+      }
+    }
+  }
+  for (const s of satellites) {
+    if (out.length >= n) break;
+    if (seen.has(s.noradId)) continue;
+    if (s.orbitClass === "LEO" && s.objectType === "PAY") {
+      out.push(s);
+      seen.add(s.noradId);
+    }
+  }
+  return out;
+}

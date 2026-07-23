@@ -7,6 +7,7 @@ import type { PropagationClient } from "../propagation/propagationClient";
 import { MobileHud } from "./MobileHud";
 import { InfoSheet } from "./InfoSheet";
 import { CatalogPanel } from "./CatalogPanel";
+import { PassesPanel } from "./PassesPanel";
 import { fmtUTC, fmtOffset } from "./format";
 
 const ACCENT = "#ffb547";
@@ -139,7 +140,7 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
 
       {/* panels (filled in by later tasks) */}
       {tab === "catalog" && <CatalogPanel satellites={satellites} visibleIds={visibleIds} onPick={pickSat} />}
-      {tab === "passes" && <PanelStub title="Upcoming passes" />}
+      {tab === "passes" && <PassesPanel satellites={satellites} />}
       {tab === "agent" && <PanelStub title="Agent" />}
 
       {/* tab bar */}
