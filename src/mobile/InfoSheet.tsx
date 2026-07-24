@@ -3,7 +3,8 @@ import type { Satellite } from "../types";
 import { inferUsage } from "../data/usage";
 import { groundTrackPoints, subSatellitePoint, type GeoPoint } from "../globe/groundTrack";
 import { fmtPeriod, orbitColor } from "./format";
-import { CONTINENTS, MERIDIANS, PARALLELS } from "./worldMap";
+import { MERIDIANS, PARALLELS } from "./worldMap";
+import { LAND } from "./worldLand";
 
 const ACCENT = "#ffb547";
 
@@ -139,17 +140,18 @@ function MiniGroundTrack({ sat, atMs, width = 330 }: { sat: Satellite; atMs: num
     <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: "block" }} preserveAspectRatio="xMidYMid meet">
       {/* ocean */}
       <rect x="0" y="0" width={width} height={height} fill="rgba(8,14,24,0.75)" stroke="rgba(255,255,255,0.08)" />
-      {/* land */}
-      {CONTINENTS.map((ring, i) => (
-        <polygon
-          key={i}
-          points={ring.map(([lon, lat]) => `${((lon + 180) / 360) * width},${((90 - lat) / 180) * height}`).join(" ")}
-          fill="rgba(96,132,168,0.16)"
-          stroke="rgba(150,185,215,0.22)"
-          strokeWidth="0.4"
-          strokeLinejoin="round"
-        />
-      ))}
+      {/* land (Natural Earth 110m coastlines) */}
+      {LAND.map((ring, i) => {
+        let d = "";
+        for (let j = 0; j < ring.length; j += 2) {
+          const x = ((ring[j] + 180) / 360) * width;
+          const y = ((90 - ring[j + 1]) / 180) * height;
+          d += (j === 0 ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1);
+        }
+        return (
+          <path key={i} d={d + "Z"} fill="rgba(96,132,168,0.16)" stroke="rgba(150,185,215,0.22)" strokeWidth="0.35" strokeLinejoin="round" />
+        );
+      })}
       {/* lat/lon graticule (equator + prime meridian emphasized) */}
       {PARALLELS.map((lat) => {
         const y = ((90 - lat) / 180) * height;
