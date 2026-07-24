@@ -1,5 +1,7 @@
 import type { Satellite } from "../types";
 import { inferUsage } from "../data/usage";
+import { compassDir } from "../passes/predictor";
+import type { LiveState } from "./liveState";
 
 export const STATIC_PROMPTS: string[] = [
   "Tell me more about this satellite",
@@ -26,11 +28,57 @@ export function buildDynamicPrompts(sat: Satellite): string[] {
   if (sat.objectType === "DEB") out.push("What event created this debris?");
   if (sat.objectType === "R/B") out.push("What was the upper stage's mission?");
   if (sat.orbitClass === "GEO") out.push("What's the operational slot longitude?");
+  if (sat.orbitClass === "LEO" || sat.orbitClass === "MEO") out.push("When can I see it next?");
   if (cats.includes("military")) out.push("What's publicly known about its mission?");
   return out;
 }
 
-export function buildSystemPrompt(sat: Satellite): string {
+function pad(n: number): string {
+  return String(n).padStart(2, "0");
+}
+function fmtLat(lat: number): string {
+  return `${Math.abs(lat).toFixed(2)}°${lat >= 0 ? "N" : "S"}`;
+}
+function fmtLon(lon: number): string {
+  return `${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
+}
+function fmtUTCTime(d: Date): string {
+  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+}
+
+function liveStateLines(live: LiveState): string[] {
+  const lines = [
+    "",
+    'LIVE STATE (computed now from SGP4 — authoritative real-time data; use it for "where is it", "is it overhead", "when can I see it" questions)',
+    `  time (UTC): ${new Date(live.atMs).toISOString().replace("T", " ").slice(0, 19)}`,
+    `  sub-satellite point: ${fmtLat(live.latDeg)}, ${fmtLon(live.lonDeg)}`,
+    `  altitude: ${Math.round(live.altKm).toLocaleString()} km`,
+    `  ground speed: ${live.speedKmS.toFixed(2)} km/s`,
+    `  illumination: ${live.illumination}`,
+    `  observer location: ${live.observer.latDeg.toFixed(2)}, ${live.observer.lonDeg.toFixed(2)}`,
+  ];
+  if (live.look) {
+    const el = live.look.elevationDeg;
+    lines.push(
+      el > 0
+        ? `  from observer now: ${el.toFixed(0)}° above the horizon (az ${live.look.azimuthDeg.toFixed(0)}°), range ${Math.round(live.look.rangeKm).toLocaleString()} km`
+        : "  from observer now: below the horizon (not currently visible)",
+    );
+  }
+  if (live.passes.length) {
+    lines.push("  upcoming passes over the observer (elevation > 5°):");
+    for (const p of live.passes) {
+      lines.push(
+        `    - ${fmtUTCTime(p.aos)} → ${fmtUTCTime(p.los)}, max el ${Math.round(p.maxElDeg)}°, ${compassDir(p.aosAzDeg)}→${compassDir(p.losAzDeg)}`,
+      );
+    }
+  } else {
+    lines.push("  upcoming passes over the observer: none above 5° in the next 24 h");
+  }
+  return lines;
+}
+
+export function buildSystemPrompt(sat: Satellite, live?: LiveState | null): string {
   const ucs = sat.ucs;
   const usage = [...inferUsage(sat)].join(", ");
   const lines: string[] = [
@@ -70,5 +118,6 @@ export function buildSystemPrompt(sat: Satellite): string {
     if (ucs.launchSite) lines.push(`  launch site: ${ucs.launchSite}`);
     if (ucs.launchVehicle) lines.push(`  launch vehicle: ${ucs.launchVehicle}`);
   }
+  if (live) lines.push(...liveStateLines(live));
   return lines.filter(Boolean).join("\n");
 }
