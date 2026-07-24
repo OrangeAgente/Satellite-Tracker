@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Satellite } from "../types";
 import { getApiKey, isProxyOnly, setApiKey, streamChat, type ChatMessage } from "../llm/cohere";
 import { STATIC_PROMPTS, buildDynamicPrompts, buildSystemPrompt } from "./prompts";
+import { computeLiveState } from "./liveState";
+import { useApp } from "../store";
 
 export interface Turn {
   role: "user" | "assistant";
@@ -58,8 +60,10 @@ export function useAgentConversation(sat: Satellite | undefined): AgentConversat
     setTurns(nextTurns);
     setStreaming(true);
 
+    const { simTime, observer } = useApp.getState();
+    const live = computeLiveState(sat, observer, simTime ?? Date.now());
     const messages: ChatMessage[] = [
-      { role: "system", content: buildSystemPrompt(sat) },
+      { role: "system", content: buildSystemPrompt(sat, live) },
       ...nextTurns.slice(0, -1).map<ChatMessage>((t) => ({ role: t.role, content: t.text })),
     ];
 

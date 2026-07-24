@@ -1,6 +1,29 @@
 import { describe, it, expect } from "vitest";
 import { buildDynamicPrompts, buildSystemPrompt } from "../../src/agent/prompts";
+import type { LiveState } from "../../src/agent/liveState";
 import { mkSat } from "../factory";
+
+const LIVE: LiveState = {
+  atMs: Date.UTC(2026, 6, 24, 12, 0, 0),
+  latDeg: 12.34,
+  lonDeg: -45.67,
+  altKm: 418,
+  speedKmS: 7.66,
+  illumination: "sunlit",
+  observer: { latDeg: 37.77, lonDeg: -122.42, altKm: 0.05 },
+  look: { elevationDeg: 23, azimuthDeg: 145, rangeKm: 1180 },
+  passes: [
+    {
+      noradId: 25544,
+      name: "ISS",
+      aos: new Date(Date.UTC(2026, 6, 24, 14, 32, 0)),
+      los: new Date(Date.UTC(2026, 6, 24, 14, 41, 0)),
+      maxElDeg: 47,
+      aosAzDeg: 45,
+      losAzDeg: 200,
+    },
+  ],
+};
 
 describe("buildDynamicPrompts", () => {
   it("adds a Starlink prompt for starlink-category objects", () => {
@@ -39,5 +62,19 @@ describe("buildSystemPrompt", () => {
     const sys = buildSystemPrompt(mkSat({ ucs: { operator: "SpaceX", users: "Commercial" } }));
     expect(sys).toContain("UCS METADATA");
     expect(sys).toContain("SpaceX");
+  });
+
+  it("omits the LIVE STATE block when no live state is given", () => {
+    expect(buildSystemPrompt(mkSat())).not.toContain("LIVE STATE");
+  });
+
+  it("appends a LIVE STATE block with position, altitude and passes", () => {
+    const sys = buildSystemPrompt(mkSat(), LIVE);
+    expect(sys).toContain("LIVE STATE");
+    expect(sys).toContain("sub-satellite point: 12.34°N, 45.67°W");
+    expect(sys).toContain("altitude: 418 km");
+    expect(sys).toContain("illumination: sunlit");
+    expect(sys).toContain("23° above the horizon");
+    expect(sys).toContain("max el 47°");
   });
 });
