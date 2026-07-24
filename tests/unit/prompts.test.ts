@@ -77,4 +77,11 @@ describe("buildSystemPrompt", () => {
     expect(sys).toContain("23° above the horizon");
     expect(sys).toContain("max el 47°");
   });
+
+  it("renders pass times in the browser's local timezone, not UTC", () => {
+    const sys = buildSystemPrompt(mkSat(), LIVE);
+    expect(sys).toContain("local timezone");
+    // "HH:MM → HH:MM, max el 47°" with no " UTC" between the time and the arrow
+    expect(sys).toMatch(/\d\d:\d\d → \d\d:\d\d, max el 47°/);
+  });
 });
