@@ -42,15 +42,33 @@ function fmtLat(lat: number): string {
 function fmtLon(lon: number): string {
   return `${Math.abs(lon).toFixed(2)}°${lon >= 0 ? "E" : "W"}`;
 }
-function fmtUTCTime(d: Date): string {
-  return `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
+function fmtLocalTime(d: Date): string {
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fmtLocalDateTime(d: Date): string {
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+// Short label for the browser's local timezone (e.g. "PDT", "GMT+2"), so the
+// agent presents times in the same zone the passes panel uses.
+function localTzLabel(): string {
+  try {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" }).formatToParts(new Date());
+    const name = parts.find((p) => p.type === "timeZoneName")?.value;
+    if (name) return name;
+  } catch {
+    /* fall through to offset */
+  }
+  const off = -new Date().getTimezoneOffset();
+  const s = off >= 0 ? "+" : "-";
+  return `UTC${s}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`;
 }
 
 function liveStateLines(live: LiveState): string[] {
+  const tz = localTzLabel();
   const lines = [
     "",
-    'LIVE STATE (computed now from SGP4 — authoritative real-time data; use it for "where is it", "is it overhead", "when can I see it" questions)',
-    `  time (UTC): ${new Date(live.atMs).toISOString().replace("T", " ").slice(0, 19)}`,
+    `LIVE STATE (computed now from SGP4 — authoritative real-time data; use it for "where is it", "is it overhead", "when can I see it" questions). All times below are in the user's local timezone (${tz}); give the user times in ${tz}, not UTC.`,
+    `  time: ${fmtLocalDateTime(new Date(live.atMs))} ${tz}`,
     `  sub-satellite point: ${fmtLat(live.latDeg)}, ${fmtLon(live.lonDeg)}`,
     `  altitude: ${Math.round(live.altKm).toLocaleString()} km`,
     `  ground speed: ${live.speedKmS.toFixed(2)} km/s`,
@@ -66,10 +84,10 @@ function liveStateLines(live: LiveState): string[] {
     );
   }
   if (live.passes.length) {
-    lines.push("  upcoming passes over the observer (elevation > 5°):");
+    lines.push(`  upcoming passes over the observer (${tz}, elevation > 5°):`);
     for (const p of live.passes) {
       lines.push(
-        `    - ${fmtUTCTime(p.aos)} → ${fmtUTCTime(p.los)}, max el ${Math.round(p.maxElDeg)}°, ${compassDir(p.aosAzDeg)}→${compassDir(p.losAzDeg)}`,
+        `    - ${fmtLocalTime(p.aos)} → ${fmtLocalTime(p.los)}, max el ${Math.round(p.maxElDeg)}°, ${compassDir(p.aosAzDeg)}→${compassDir(p.losAzDeg)}`,
       );
     }
   } else {
