@@ -3,6 +3,7 @@ import type { Satellite } from "../types";
 import { inferUsage } from "../data/usage";
 import { groundTrackPoints, subSatellitePoint, type GeoPoint } from "../globe/groundTrack";
 import { fmtPeriod, orbitColor } from "./format";
+import { CONTINENTS, MERIDIANS, PARALLELS } from "./worldMap";
 
 const ACCENT = "#ffb547";
 
@@ -132,31 +133,52 @@ function MiniGroundTrack({ sat, atMs, width = 330 }: { sat: Satellite; atMs: num
   }
 
   const curXY = cur ? proj(cur) : null;
+  const grid = "rgba(255,255,255,0.06)";
 
   return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: "block" }}>
-      <rect x="0" y="0" width={width} height={height} fill="rgba(10,14,22,0.6)" stroke="rgba(255,255,255,0.06)" />
-      <line x1="0" y1={height / 2} x2={width} y2={height / 2} stroke="rgba(255,255,255,0.1)" strokeDasharray="2 3" />
-      <line x1={width / 2} y1="0" x2={width / 2} y2={height} stroke="rgba(255,255,255,0.06)" />
-      {[[30, 45, 60, -95], [10, 50, -15, -60], [15, 60, 15, 25], [25, 70, 35, 95], [10, 20, -30, 135]].map(
-        ([h, w, lat, lon], i) => {
-          const x = ((lon + 180) / 360) * width;
-          const y = ((90 - lat) / 180) * height;
-          return <ellipse key={i} cx={x} cy={y} rx={w * 0.4} ry={h * 0.4} fill="rgba(255,255,255,0.05)" />;
-        },
-      )}
+    <svg width="100%" viewBox={`0 0 ${width} ${height}`} style={{ display: "block" }} preserveAspectRatio="xMidYMid meet">
+      {/* ocean */}
+      <rect x="0" y="0" width={width} height={height} fill="rgba(8,14,24,0.75)" stroke="rgba(255,255,255,0.08)" />
+      {/* land */}
+      {CONTINENTS.map((ring, i) => (
+        <polygon
+          key={i}
+          points={ring.map(([lon, lat]) => `${((lon + 180) / 360) * width},${((90 - lat) / 180) * height}`).join(" ")}
+          fill="rgba(96,132,168,0.16)"
+          stroke="rgba(150,185,215,0.22)"
+          strokeWidth="0.4"
+          strokeLinejoin="round"
+        />
+      ))}
+      {/* lat/lon graticule (equator + prime meridian emphasized) */}
+      {PARALLELS.map((lat) => {
+        const y = ((90 - lat) / 180) * height;
+        return (
+          <line key={`p${lat}`} x1="0" y1={y} x2={width} y2={y} stroke={grid}
+            strokeWidth={lat === 0 ? 0.8 : 0.5} strokeDasharray={lat === 0 ? "2 3" : undefined}
+            opacity={lat === 0 ? 0.9 : 0.55} />
+        );
+      })}
+      {MERIDIANS.map((lon) => {
+        const x = ((lon + 180) / 360) * width;
+        return (
+          <line key={`m${lon}`} x1={x} y1="0" x2={x} y2={height} stroke={grid}
+            strokeWidth={lon === 0 ? 0.8 : 0.5} opacity={lon === 0 ? 0.9 : 0.55} />
+        );
+      })}
+      {/* ground track */}
       {segments.map((seg, i) => (
         <polyline
           key={i}
           fill="none"
           stroke={ACCENT}
-          strokeWidth="1.2"
-          opacity="0.7"
+          strokeWidth="1.4"
+          opacity="0.9"
           points={seg.map((p) => { const xy = proj(p); return `${xy.x},${xy.y}`; }).join(" ")}
         />
       ))}
       {curXY && <circle cx={curXY.x} cy={curXY.y} r="3" fill={ACCENT} />}
-      {curXY && <circle cx={curXY.x} cy={curXY.y} r="6" fill="none" stroke={ACCENT} strokeWidth="1" opacity="0.5" />}
+      {curXY && <circle cx={curXY.x} cy={curXY.y} r="6.5" fill="none" stroke={ACCENT} strokeWidth="1" opacity="0.6" />}
     </svg>
   );
 }
