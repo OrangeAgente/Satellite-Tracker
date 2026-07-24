@@ -18,10 +18,14 @@ export function SatelliteAgent() {
     setInput("");
   }, [sel?.noradId]);
 
-  // Autoscroll the thread.
+  // Follow the stream, but only when already near the bottom, so scrolling up to
+  // re-read is respected instead of being yanked back down on every re-render.
   useEffect(() => {
-    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  });
+    const el = threadRef.current;
+    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [turns]);
 
   if (!sel) return null;
 

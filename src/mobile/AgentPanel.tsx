@@ -11,9 +11,15 @@ export function AgentPanel({ sat, onClose }: { sat: Satellite | undefined; onClo
   const threadRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { setInput(""); }, [sat?.noradId]);
+  // Follow the stream, but only when the user is already near the bottom — so
+  // scrolling up to re-read is respected. (The panel re-renders ~4x/sec from the
+  // clock tick; keying this on `turns` stops it yanking back to the bottom.)
   useEffect(() => {
-    if (threadRef.current) threadRef.current.scrollTop = threadRef.current.scrollHeight;
-  });
+    const el = threadRef.current;
+    if (el && el.scrollHeight - el.scrollTop - el.clientHeight < 80) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [turns]);
 
   if (!sat) {
     return (
