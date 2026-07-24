@@ -145,7 +145,13 @@ test.describe("mobile — agent", () => {
 
     await expect(page.locator(".m-turn.user")).toContainText("what is this?");
     await expect(page.locator(".m-turn.assistant")).toContainText("low Earth orbit");
-    const scrollable = await page.locator(".m-thread").evaluate((el) => el.scrollHeight > el.clientHeight + 1);
-    expect(scrollable).toBe(true);
+    const thread = page.locator(".m-thread");
+    expect(await thread.evaluate((el) => el.scrollHeight > el.clientHeight + 1)).toBe(true);
+
+    // Regression: scrolling up must stick. The panel re-renders ~4x/sec from the
+    // clock tick, and previously yanked the thread back to the bottom each time.
+    await thread.evaluate((el) => { el.scrollTop = 0; });
+    await page.waitForTimeout(700); // past 2+ clock ticks
+    expect(await thread.evaluate((el) => el.scrollTop)).toBeLessThan(20);
   });
 });
