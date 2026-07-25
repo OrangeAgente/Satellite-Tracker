@@ -47,7 +47,16 @@ export function setApiKey(key: string | null, persistence: KeyPersistence = "ses
   }
 }
 
+/**
+ * Stream a chat completion.
+ *
+ * `context` carries catalog/telemetry facts for the selected satellite. It is
+ * sent as a separate field, NOT as a `system` message: the server owns the
+ * assistant's instructions and treats this purely as data. That's what stops
+ * /api/chat being usable as a general-purpose LLM by anyone who finds it.
+ */
 export async function* streamChat(opts: {
+  context?: string;
   messages: ChatMessage[];
   apiKey?: string;
   model?: string;
@@ -59,6 +68,7 @@ export async function* streamChat(opts: {
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
       model: opts.model ?? DEFAULT_MODEL,
+      context: opts.context,
       messages: opts.messages,
     }),
   }).catch((err: unknown) => {
@@ -72,7 +82,8 @@ export async function* streamChat(opts: {
   }
 
   // Proxy returned a hard error → bubble it (don't fall back, the deployed
-  // site has CSP that blocks api.cohere.com anyway).
+  // site has CSP that blocks api.cohere.com anyway). Log the raw body for
+  // debugging but never render it: it can carry upstream account detail.
   if (proxyRes && proxyRes.status !== 503 && proxyRes.status !== 404) {
     let body = "";
     try {
@@ -80,9 +91,11 @@ export async function* streamChat(opts: {
     } catch {
       /* ignore */
     }
+    if (body) console.error(`[cohere] proxy ${proxyRes.status}: ${body}`);
     if (proxyRes.status === 401) throw new Error("Server-side Cohere key invalid.");
-    if (proxyRes.status === 429) throw new Error("Rate limit hit. Try again shortly.");
-    throw new Error(`Proxy ${proxyRes.status}: ${body || proxyRes.statusText}`);
+    if (proxyRes.status === 429) throw new Error("Too many requests. Try again shortly.");
+    if (proxyRes.status === 400) throw new Error("That request couldn't be processed.");
+    throw new Error("The assistant is unavailable right now. Try again shortly.");
   }
 
   // Proxy not configured (dev mode, or missing env var). Fall back to direct
@@ -104,7 +117,11 @@ export async function* streamChat(opts: {
     },
     body: JSON.stringify({
       model: opts.model ?? DEFAULT_MODEL,
-      messages: opts.messages,
+      // Dev-only path: no proxy in front, so the context becomes a local system
+      // message here. In production the server owns this (see above).
+      messages: opts.context
+        ? [{ role: "system" as const, content: opts.context }, ...opts.messages]
+        : opts.messages,
       stream: true,
     }),
   });

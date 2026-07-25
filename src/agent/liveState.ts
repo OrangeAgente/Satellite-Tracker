@@ -68,7 +68,7 @@ export function computeLiveState(sat: Satellite, observer: Observer, atMs: numbe
   }
 
   // Current look angle from the observer.
-  let look: LiveState["look"] = null;
+  let look: LiveState["look"];
   try {
     const gdObs = { longitude: observer.lonDeg * DEG, latitude: observer.latDeg * DEG, height: observer.altKm };
     const ecf = satellite.eciToEcf(pos, gmst);

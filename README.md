@@ -65,5 +65,5 @@ scripts/build-dataset.mjs   # merges CelesTrak + UCS into public/data/satellites
 src/propagation/            # Web Worker running SGP4 propagation at 2 Hz
 src/globe/                  # three.js scene: Earth, point cloud, orbit line
 src/ui/                     # search, filters, info panel, legend
-docker/                     # entrypoint + nginx config
+docker/                     # container entrypoint
 ```

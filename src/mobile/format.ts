@@ -10,7 +10,9 @@ const ORBIT_COLORS: Record<OrbitClass, string> = {
 };
 
 export function orbitColor(orbit: OrbitClass): string {
-  return ORBIT_COLORS[orbit] ?? ORBIT_COLORS.UNK;
+  // Own-key check, not `??` — an unvalidated orbit class like "constructor"
+  // would otherwise resolve to an inherited prototype member.
+  return Object.hasOwn(ORBIT_COLORS, orbit) ? ORBIT_COLORS[orbit] : ORBIT_COLORS.UNK;
 }
 
 function pad(n: number): string {

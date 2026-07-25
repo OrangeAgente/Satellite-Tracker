@@ -29,7 +29,7 @@ services:
       target: prod
     image: satellite-tracker:prod
     ports:
-      - "8080:80"
+      - "8080:8080"
 
 volumes:
   node_modules:
