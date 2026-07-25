@@ -53,6 +53,19 @@ export default tseslint.config(
     },
   },
 
+  // The globe layer is a thin React wrapper around three.js, which is an
+  // imperative, mutation-based API: GPU buffer attributes are updated by
+  // writing into Float32Arrays, and stable objects are held in refs to be fed
+  // to shader uniforms. The React Compiler immutability/ref rules can't model
+  // that, and "fixing" them would mean not using three.js correctly.
+  {
+    files: ["src/globe/**/*.{ts,tsx}"],
+    rules: {
+      "react-hooks/immutability": "off",
+      "react-hooks/refs": "off",
+    },
+  },
+
   // Tests
   {
     files: ["tests/**/*.{ts,tsx}"],

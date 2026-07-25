@@ -67,7 +67,6 @@ export function Satellites({ satellites, client, visibleIds }: Props) {
     g.setAttribute("size", new THREE.BufferAttribute(sizes, 1));
     g.setAttribute("visibility", new THREE.BufferAttribute(visibility, 1));
     return g;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [positions, colors, sizes, visibility]);
 
   const material = useMemo(() => {
