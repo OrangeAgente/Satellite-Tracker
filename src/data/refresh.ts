@@ -1,6 +1,9 @@
 import type { PropagationClient } from "../propagation/propagationClient";
 
-const CELESTRAK_ACTIVE_TLE = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=TLE";
+// Same-origin proxy (server/server.js) rather than celestrak.org directly: the
+// deployed CSP is `connect-src 'self'`, so a direct fetch is blocked and the
+// refresh silently never ran. The server caches upstream for an hour.
+const TLE_URL = "/api/tle";
 
 interface ParsedTle {
   noradId: number;
@@ -24,21 +27,25 @@ export function parseTleText(text: string): ParsedTle[] {
 
 export function startLiveRefresh(
   client: PropagationClient,
-  onRefresh: (stamp: string) => void,
-  intervalMs = 2 * 60_000,
+  onRefresh: (at: number) => void,
+  // TLEs are re-issued a few times a day at most, and the server caches for an
+  // hour — polling harder just burns bandwidth (and CelesTrak asks us not to).
+  intervalMs = 30 * 60_000,
 ): () => void {
   let stopped = false;
   async function run() {
     if (stopped) return;
     try {
-      const res = await fetch(CELESTRAK_ACTIVE_TLE, { cache: "no-cache" });
+      const res = await fetch(TLE_URL);
       if (res.ok) {
         const text = await res.text();
         const parsed = parseTleText(text);
         if (parsed.length) {
           client.updateTles(parsed);
-          onRefresh(new Date().toLocaleTimeString());
+          onRefresh(Date.now());
         }
+      } else {
+        console.warn(`[refresh] TLE fetch failed: HTTP ${res.status}`);
       }
     } catch (err) {
       console.warn("[refresh] live TLE fetch failed:", err);

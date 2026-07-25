@@ -113,7 +113,7 @@ async function fetchGroupJson(group) {
   const text = await res.text();
   try {
     return JSON.parse(text);
-  } catch (err) {
+  } catch {
     // CelesTrak sometimes returns "No GP data found" as plain text for empty groups.
     console.warn(`[celestrak] Group "${group}" returned non-JSON (${text.slice(0, 80)}...)`);
     return [];
@@ -126,11 +126,27 @@ async function fetchSatcat() {
   return parseCsv(text);
 }
 
+// The UCS workbook is third-party input fed to a spreadsheet parser, so bound
+// it. NOTE: xlsx@0.18.5 carries two high-severity advisories (prototype
+// pollution, ReDoS) and the fixed release is NOT published to the npm registry.
+// Remedy: npm i -D "xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+// This runs at build time only — xlsx is never present in the production image.
+const MAX_UCS_BYTES = 25 * 1024 * 1024;
+
 async function fetchUcs() {
   for (const url of [UCS_URL, UCS_FALLBACK_URL]) {
     try {
+      // Never fetch the workbook over plaintext, even if UCS_URL is overridden.
+      if (new URL(url).protocol !== "https:") {
+        console.warn(`[ucs] Refusing non-https source: ${url}`);
+        continue;
+      }
       const res = await fetchWithRetry(url);
-      const buf = new Uint8Array(await res.arrayBuffer());
+      const raw = await res.arrayBuffer();
+      if (raw.byteLength > MAX_UCS_BYTES) {
+        throw new Error(`workbook too large (${raw.byteLength} bytes > ${MAX_UCS_BYTES})`);
+      }
+      const buf = new Uint8Array(raw);
       const wb = XLSX.read(buf, { type: "array" });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
@@ -237,7 +253,7 @@ function deriveOrbit(meanMotion, eccentricity, inclination) {
   const e = Math.max(0, Math.min(0.999, eccentricity));
   const apogee = a * (1 + e) - 6378.137;
   const perigee = a * (1 - e) - 6378.137;
-  let orbitClass = "UNK";
+  let orbitClass;
   if (e > 0.25) orbitClass = "HEO";
   else if (apogee < 2000) orbitClass = "LEO";
   else if (apogee > 35000 && apogee < 36500 && Math.abs(inclination) < 10 && e < 0.01) orbitClass = "GEO";
@@ -386,6 +402,22 @@ async function main() {
     categoryGroups: CATEGORY_GROUPS,
     satellites,
   };
+
+  // Sanity-check before overwriting a known-good dataset: a partially-failed
+  // upstream fetch (or a poisoned source) should abort the build rather than
+  // silently ship a truncated catalog. The real catalog is ~16k objects.
+  const MIN_EXPECTED = 5_000;
+  const MAX_EXPECTED = 60_000;
+  if (satellites.length < MIN_EXPECTED || satellites.length > MAX_EXPECTED) {
+    throw new Error(
+      `refusing to write implausible dataset: ${satellites.length} satellites ` +
+        `(expected ${MIN_EXPECTED}–${MAX_EXPECTED}). Upstream sources may be degraded.`,
+    );
+  }
+  const withTle = satellites.filter((s) => s.tleLine1 && s.tleLine2).length;
+  if (withTle < satellites.length * 0.5) {
+    throw new Error(`refusing to write dataset: only ${withTle}/${satellites.length} records have TLEs`);
+  }
 
   await fs.writeFile(path.join(OUT_DIR, "satellites.json"), JSON.stringify(payload));
   await fs.writeFile(

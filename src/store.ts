@@ -13,7 +13,9 @@ interface AppState {
   hoveredId: number | null;
   searchQuery: string;
   filters: FilterState;
-  lastRefreshAt: string | null;
+  /** Epoch ms of the last successful TLE refresh (not a formatted string — it
+   * gets subtracted from Date.now() for the "Δ" readout). */
+  lastRefreshAt: number | null;
 
   pinnedIds: number[];
   simTime: number | null;
@@ -32,7 +34,7 @@ interface AppState {
   toggleFilter: (dim: keyof FilterState, value: string) => void;
   clearFilter: (dim: keyof FilterState) => void;
   clearAllFilters: () => void;
-  setLastRefreshAt: (s: string) => void;
+  setLastRefreshAt: (at: number) => void;
   getSatellite: (id: number) => Satellite | undefined;
 
   togglePin: (id: number) => void;

@@ -10,7 +10,7 @@ vi.mock("../../src/llm/cohere", () => ({
   isProxyOnly: () => h.proxyOnly,
   getApiKey: () => h.key,
   setApiKey: () => {},
-  // eslint-disable-next-line require-yield
+
   streamChat: async function* stream() {
     for (const c of h.chunks) yield c;
   },

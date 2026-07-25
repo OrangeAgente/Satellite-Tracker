@@ -62,10 +62,14 @@ export function useAgentConversation(sat: Satellite | undefined): AgentConversat
 
     const { simTime, observer } = useApp.getState();
     const live = computeLiveState(sat, observer, simTime ?? Date.now());
-    const messages: ChatMessage[] = [
-      { role: "system", content: buildSystemPrompt(sat, live) },
-      ...nextTurns.slice(0, -1).map<ChatMessage>((t) => ({ role: t.role, content: t.text })),
-    ];
+    const context = buildSystemPrompt(sat, live);
+    // Drop empty turns: a failed request leaves an assistant turn with no text,
+    // and replaying it makes every subsequent send fail (the API rejects empty
+    // content), which used to brick the conversation until RESET.
+    const messages: ChatMessage[] = nextTurns
+      .slice(0, -1)
+      .filter((t) => t.text.trim().length > 0)
+      .map<ChatMessage>((t) => ({ role: t.role, content: t.text }));
 
     const ac = new AbortController();
     abortRef.current = ac;
@@ -73,7 +77,7 @@ export function useAgentConversation(sat: Satellite | undefined): AgentConversat
     void (async () => {
       let acc = "";
       try {
-        for await (const chunk of streamChat({ messages, apiKey: apiKey ?? undefined, signal: ac.signal })) {
+        for await (const chunk of streamChat({ context, messages, apiKey: apiKey ?? undefined, signal: ac.signal })) {
           acc += chunk;
           setTurns((cur) => {
             const copy = cur.slice();

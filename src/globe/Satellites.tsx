@@ -125,6 +125,12 @@ export function Satellites({ satellites, client, visibleIds }: Props) {
     });
   }, [gl]);
 
+  // THREE.Points has no dispose(), so r3f never releases the geometry/material
+  // we pass as props. Free them here — Scene unmounts on every crossing of the
+  // mobile breakpoint, and these buffers/programs are large.
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  useEffect(() => () => material.dispose(), [material]);
+
   useFrame(() => {
     const t = useApp.getState().simTime ?? Date.now();
     subsolarDir(new Date(t), (material.uniforms.uSunDir.value as THREE.Vector3));

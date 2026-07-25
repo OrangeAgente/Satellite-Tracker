@@ -23,7 +23,7 @@ export function TopBar({ satellites, total, visible }: Props) {
 
   const utc = formatUtc(now);
   const met = formatMet(now - MET_EPOCH);
-  const tle = lastRefreshAt ? formatDelta(now - Date.parse(lastRefreshAt)) : "—";
+  const tle = lastRefreshAt != null ? formatDelta(now - lastRefreshAt) : "—";
 
   return (
     <header className="ops-topbar">

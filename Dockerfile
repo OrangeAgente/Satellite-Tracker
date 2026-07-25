@@ -1,17 +1,21 @@
 # syntax=docker/dockerfile:1.6
 
 # ---- deps: install node modules once, reused by dev and build stages ----
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
+# Pin npm to the major that writes this lockfile. The image's bundled npm (10.x)
+# computes a different tree than npm 12 and reads the lock as out of sync; the
+# previous `npm ci || npm install` fallback papered over that by silently
+# resolving fresh versions, which defeats the lockfile as a supply-chain
+# control. Keep `npm ci` strict so a real integrity mismatch FAILS the build.
+# (npm 12 requires Node >= 22, which is also why these stages are on 22 LTS —
+# Node 20 is past end-of-life and no longer receives security patches.)
+RUN npm i -g npm@12.0.1
 COPY package.json package-lock.json* ./
-# Prefer a reproducible `npm ci`, but fall back to `npm install` if the lockfile
-# doesn't satisfy this image's npm — the lock may be written by a newer local
-# npm (e.g. 12.x) than the one bundled with node:20-alpine (10.8.x), which can
-# read a valid lock as out of sync. `npm install` reconciles and installs.
-RUN if [ -f package-lock.json ]; then npm ci || npm install; else npm install; fi
+RUN npm ci
 
 # ---- dev: runs the Vite dev server with source bind-mounted at runtime ----
-FROM node:20-alpine AS dev
+FROM node:22-alpine AS dev
 WORKDIR /app
 RUN apk add --no-cache tini
 COPY --from=deps /app/node_modules /app/node_modules
@@ -26,7 +30,7 @@ ENTRYPOINT ["/sbin/tini", "--", "/usr/local/bin/entrypoint.sh"]
 CMD ["npm", "run", "dev"]
 
 # ---- build: generates static site into /app/dist ----
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 WORKDIR /app
 COPY --from=deps /app/node_modules /app/node_modules
 COPY . .
@@ -42,7 +46,7 @@ RUN mkdir -p public/data \
  && npm run build
 
 # ---- prod: tiny Node server (static + Cohere proxy), zero npm deps ----
-FROM node:20-alpine AS prod
+FROM node:22-alpine AS prod
 WORKDIR /app
 RUN apk add --no-cache tini && adduser -D -H -u 10001 app
 COPY --from=build /app/dist /app/dist

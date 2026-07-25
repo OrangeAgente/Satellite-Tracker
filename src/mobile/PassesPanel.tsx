@@ -1,9 +1,12 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../store";
 import type { Satellite } from "../types";
 import { compassDir, pickPassPool, predictNextPasses, predictPasses } from "../passes/predictor";
 import type { Observer } from "../passes/predictor";
 import { fmtLocalHMS } from "./format";
+
+/** Idle time before a typed observer edit reaches the store (and re-predicts). */
+const COMMIT_DELAY_MS = 400;
 
 export function PassesPanel({ satellites, onClose }: { satellites: Satellite[]; onClose: () => void }) {
   const sel = useApp((s) => (s.selectedId != null ? s.getSatellite(s.selectedId) : undefined));
@@ -30,12 +33,7 @@ export function PassesPanel({ satellites, onClose }: { satellites: Satellite[]; 
       </div>
 
       {editing && (
-        <div className="m-obs">
-          <ObsRow label="LAT" value={observer.latDeg} onChange={(v) => setObserver({ ...observer, latDeg: clamp(v, -90, 90) })} />
-          <ObsRow label="LON" value={observer.lonDeg} onChange={(v) => setObserver({ ...observer, lonDeg: clamp(v, -180, 180) })} />
-          <ObsRow label="ALT (km)" value={observer.altKm} onChange={(v) => setObserver({ ...observer, altKm: Math.max(0, v) })} />
-          <button className="m-clear" onClick={() => requestGeo(setObserver)}>USE BROWSER GEO</button>
-        </div>
+        <ObserverEditor observer={observer} onChange={setObserver} onUseGeo={() => requestGeo(setObserver)} />
       )}
 
       <div className="m-panel-note dim">
@@ -64,7 +62,80 @@ export function PassesPanel({ satellites, onClose }: { satellites: Satellite[]; 
   );
 }
 
-function ObsRow({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+function ObserverEditor({
+  observer,
+  onChange,
+  onUseGeo,
+}: {
+  observer: Observer;
+  onChange: (o: Observer) => void;
+  onUseGeo: () => void;
+}) {
+  // Every keystroke that reached the store re-ran thousands of SGP4
+  // propagations, so the inputs render from local state and only commit after a
+  // pause (or on blur / Enter).
+  const [draft, setDraft] = useState(observer);
+  const draftRef = useRef(observer);
+  const committed = useRef(observer);
+  const pending = useRef(false);
+  const timer = useRef<number | undefined>(undefined);
+
+  // Re-sync when the store changes from outside the editor, e.g. browser geo.
+  useEffect(() => {
+    if (observer === committed.current) return;
+    committed.current = observer;
+    draftRef.current = observer;
+    setDraft(observer);
+  }, [observer]);
+
+  // Flush rather than drop an edit if the editor closes before the timer fires.
+  useEffect(
+    () => () => {
+      window.clearTimeout(timer.current);
+      if (pending.current) onChange(draftRef.current);
+    },
+    [onChange],
+  );
+
+  const commit = () => {
+    window.clearTimeout(timer.current);
+    pending.current = false;
+    committed.current = draftRef.current;
+    onChange(draftRef.current);
+  };
+
+  const edit = (next: Observer) => {
+    draftRef.current = next;
+    setDraft(next);
+    pending.current = true;
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(commit, COMMIT_DELAY_MS);
+  };
+
+  return (
+    <div className="m-obs">
+      <ObsRow label="LAT" value={draft.latDeg} onChange={(v) => edit({ ...draftRef.current, latDeg: clamp(v, -90, 90) })} onCommit={commit} />
+      <ObsRow label="LON" value={draft.lonDeg} onChange={(v) => edit({ ...draftRef.current, lonDeg: clamp(v, -180, 180) })} onCommit={commit} />
+      <ObsRow label="ALT (km)" value={draft.altKm} onChange={(v) => edit({ ...draftRef.current, altKm: Math.max(0, v) })} onCommit={commit} />
+      <button className="m-clear" onClick={onUseGeo}>USE BROWSER GEO</button>
+      <div className="dim" style={{ fontSize: 9.5, lineHeight: 1.5 }}>
+        Used locally for pass prediction, and shared with the AI assistant when you query it.
+      </div>
+    </div>
+  );
+}
+
+function ObsRow({
+  label,
+  value,
+  onChange,
+  onCommit,
+}: {
+  label: string;
+  value: number;
+  onChange: (v: number) => void;
+  onCommit: () => void;
+}) {
   return (
     <label className="m-obs-row">
       <span>{label}</span>
@@ -75,6 +146,10 @@ function ObsRow({ label, value, onChange }: { label: string; value: number; onCh
         onChange={(e) => {
           const v = Number(e.target.value);
           if (Number.isFinite(v)) onChange(v);
+        }}
+        onBlur={onCommit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onCommit();
         }}
       />
     </label>
