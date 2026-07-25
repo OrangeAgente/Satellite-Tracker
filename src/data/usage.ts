@@ -73,16 +73,6 @@ const MILITARY_COUNTRIES = new Set([
 export function inferUsage(sat: Satellite): Set<UsageBucket> {
   const out = new Set<UsageBucket>();
 
-  // 1) Trust UCS metadata when present.
-  const ucsUsers = (sat.ucs?.users || "").toLowerCase();
-  if (ucsUsers) {
-    if (ucsUsers.includes("military")) out.add("Military");
-    if (ucsUsers.includes("government")) out.add("Government");
-    if (ucsUsers.includes("commercial")) out.add("Commercial");
-    if (ucsUsers.includes("civil")) out.add("Civil");
-    if (out.size > 0) return out;
-  }
-
   const cats = sat.categories;
   const nameLower = sat.name.toLowerCase();
 

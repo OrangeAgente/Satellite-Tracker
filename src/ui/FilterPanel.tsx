@@ -25,7 +25,7 @@ function buildOptions(satellites: Satellite[]) {
   const types: Record<string, number> = {};
   const usage: Record<string, number> = { Civil: 0, Commercial: 0, Government: 0, Military: 0 };
   for (const s of satellites) {
-    const country = s.ucs?.operatorCountry || s.country;
+    const country = s.country;
     if (country) countries.set(country, (countries.get(country) || 0) + 1);
     for (const c of s.categories) categories.set(c, (categories.get(c) || 0) + 1);
     orbits[s.orbitClass] = (orbits[s.orbitClass] ?? 0) + 1;

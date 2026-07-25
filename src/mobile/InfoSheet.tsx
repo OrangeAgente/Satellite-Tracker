@@ -43,17 +43,15 @@ export function InfoSheet({
     ["PER", fmtPeriod(sat.periodMin)],
     ["APO", sat.apogeeKm != null ? `${sat.apogeeKm.toLocaleString()} km` : "—"],
     ["PERI", sat.perigeeKm != null ? `${sat.perigeeKm.toLocaleString()} km` : "—"],
-    ["MASS", sat.ucs?.launchMassKg ? `${sat.ucs.launchMassKg} kg` : "—"],
+    ["TYPE", sat.objectType],
     ["LCH", sat.launchDate ? sat.launchDate.slice(0, 4) : "—"],
   ];
 
   const usage = [...inferUsage(sat)].join(", ");
   const mission: [string, string | undefined][] = [
-    ["OPERATOR", sat.ucs?.operator],
-    ["COUNTRY", sat.ucs?.operatorCountry || sat.country],
+    ["COUNTRY", sat.country],
     ["USAGE", usage],
-    ["PURPOSE", sat.ucs?.purpose || sat.ucs?.detailedPurpose],
-    ["POWER", sat.ucs?.powerW ? `${sat.ucs.powerW} W` : undefined],
+    ["INTL DES", sat.intlDes],
     ["LAUNCH", sat.launchDate],
     ["TAGS", sat.categories.slice(0, 3).join(", ") || undefined],
   ];

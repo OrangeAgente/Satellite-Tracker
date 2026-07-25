@@ -24,7 +24,6 @@ export function InfoPanel() {
   const setTrackingId = useApp((s) => s.setTrackingId);
 
   if (!sel) return null;
-  const ucs = sel.ucs;
   const orbColor = ORBIT_COLOR[sel.orbitClass] ?? ORBIT_COLOR.UNK;
   const pinned = pinnedIds.includes(sel.noradId);
   const tracking = trackingId === sel.noradId;
@@ -51,7 +50,7 @@ export function InfoPanel() {
         <Cell k="PER" v={sel.periodMin != null ? `${sel.periodMin.toFixed(1)}m` : "—"} />
         <Cell k="APO" v={sel.apogeeKm != null ? `${sel.apogeeKm.toLocaleString()}km` : "—"} />
         <Cell k="PERI" v={sel.perigeeKm != null ? `${sel.perigeeKm.toLocaleString()}km` : "—"} />
-        <Cell k="MASS" v={ucs?.launchMassKg ? `${ucs.launchMassKg}kg` : "—"} />
+        <Cell k="TYPE" v={sel.objectType} />
         <Cell k="LCH" v={(sel.launchDate || "").slice(0, 4) || "—"} />
       </div>
 
@@ -79,12 +78,9 @@ export function InfoPanel() {
         <div className="ops-section-h">
           <span>Mission</span>
         </div>
-        <Kv k="OPERATOR" v={ucs?.operator} />
-        <Kv k="COUNTRY" v={ucs?.operatorCountry || sel.country} />
-        <Kv k="USAGE" v={ucs?.users || [...inferUsage(sel)].join(", ")} />
-        <Kv k="PURPOSE" v={ucs?.purpose} />
-        <Kv k="POWER" v={ucs?.powerW ? `${ucs.powerW} W` : null} />
-        <Kv k="VEHICLE" v={ucs?.launchVehicle} />
+        <Kv k="COUNTRY" v={sel.country} />
+        <Kv k="USAGE" v={[...inferUsage(sel)].join(", ")} />
+        <Kv k="INTL DES" v={sel.intlDes} />
         <Kv k="LAUNCH" v={sel.launchDate} />
         {sel.categories.length > 0 && <Kv k="TAGS" v={sel.categories.slice(0, 3).join(", ")} />}
       </section>

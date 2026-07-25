@@ -132,7 +132,6 @@ function liveStateLines(live: LiveState): string[] {
 }
 
 export function buildSystemPrompt(sat: Satellite, live?: LiveState | null): string {
-  const ucs = sat.ucs;
   const usage = [...inferUsage(sat)].join(", ");
   const lines: string[] = [
     "You are SATCOM·OPS, an expert in satellites, orbital mechanics, and space situational awareness.",
@@ -158,21 +157,6 @@ export function buildSystemPrompt(sat: Satellite, live?: LiveState | null): stri
     `  inferred usage: ${usage}`,
     dataLine("categories", sat.categories.join(", ")),
   ];
-  if (ucs) {
-    lines.push("UCS METADATA");
-    lines.push(dataLine("operator", ucs.operator));
-    lines.push(dataLine("operator country", ucs.operatorCountry));
-    lines.push(dataLine("users", ucs.users));
-    lines.push(dataLine("purpose", ucs.purpose));
-    lines.push(dataLine("detailed purpose", ucs.detailedPurpose));
-    lines.push(dataLine("contractor", ucs.contractor));
-    lines.push(dataLine("launch mass", ucs.launchMassKg, " kg"));
-    lines.push(dataLine("dry mass", ucs.dryMassKg, " kg"));
-    lines.push(dataLine("power", ucs.powerW, " W"));
-    lines.push(dataLine("expected lifetime", ucs.expectedLifetimeYears, " yr"));
-    lines.push(dataLine("launch site", ucs.launchSite));
-    lines.push(dataLine("launch vehicle", ucs.launchVehicle));
-  }
   lines.push(DATA_CLOSE);
   // LIVE STATE is computed locally from SGP4, so it sits outside the untrusted
   // fence and keeps its authoritative wording.

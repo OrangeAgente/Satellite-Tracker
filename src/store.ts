@@ -124,7 +124,7 @@ export function computeVisibleIds(state: AppState): Set<number> {
   for (const s of dataset.satellites) {
     if (anyUser && !matchesUsage(s, filters.users)) continue;
     if (anyCountry) {
-      const country = (s.ucs?.operatorCountry || s.country || "").toLowerCase();
+      const country = (s.country || "").toLowerCase();
       let match = false;
       for (const c of filters.countries) {
         if (country.includes(c.toLowerCase())) {
