@@ -4,7 +4,12 @@ import react from "@vitejs/plugin-react";
 export default defineConfig({
   plugins: [react()],
   server: {
-    host: "0.0.0.0",
+    // Bind to loopback by default. Every open advisory against the dev
+    // toolchain is a DEV-SERVER issue (CORS read, fs.deny bypass, path
+    // traversal), so binding to 0.0.0.0 unconditionally exposed them to anyone
+    // on the same network. The Docker dev stage sets HOST=0.0.0.0 explicitly,
+    // which is where wide binding is actually needed.
+    host: process.env.HOST || "127.0.0.1",
     port: 5173,
     strictPort: true,
     watch: {
