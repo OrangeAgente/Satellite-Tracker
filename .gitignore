@@ -17,3 +17,6 @@ test-results/
 playwright-report/
 .playwright/
 .last-run.json
+
+# Local Claude Code project instructions — intentionally not tracked
+CLAUDE.md
