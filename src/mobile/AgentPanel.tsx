@@ -88,7 +88,7 @@ export function AgentPanel({ sat, onClose }: { sat: Satellite | undefined; onClo
           <div className="m-thread" ref={threadRef}>
             {turns.length === 0 && (
               <div className="m-agent-empty">
-                Ask about orbit, mission, operator, or launch. Grounded in the catalog + UCS metadata.
+                Ask about orbit, mission, operator, or launch. Grounded in the catalog and live orbital data.
               </div>
             )}
             {turns.map((t, i) => (

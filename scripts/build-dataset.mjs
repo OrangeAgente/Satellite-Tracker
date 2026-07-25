@@ -3,7 +3,6 @@
  * Build the static satellite dataset by fetching, merging, and writing:
  *   - CelesTrak GP (TLE/OMM) data for the active catalog and per-category groups
  *   - CelesTrak SATCAT (satellite catalog) for universal coverage incl. debris
- *   - UCS Satellite Database for human metadata (users, purpose, operator, mass...)
  *
  * Output:
  *   public/data/satellites.json  — merged records keyed by NORAD id
@@ -14,7 +13,6 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as XLSX from "xlsx";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -22,8 +20,6 @@ const OUT_DIR = path.join(ROOT, "public", "data");
 
 const CELESTRAK_BASE = "https://celestrak.org/NORAD/elements/gp.php";
 const SATCAT_URL = "https://celestrak.org/pub/satcat.csv";
-const UCS_URL = process.env.UCS_URL || "https://www.ucsusa.org/sites/default/files/2023-05/UCS-Satellite-Database%205-1-2023.xlsx";
-const UCS_FALLBACK_URL = "https://raw.githubusercontent.com/duffau/UCS-Satellite-Database/main/UCS-Satellite-Database%205-1-2023.xlsx";
 
 // CelesTrak category groups we track. Each satellite inherits the list of groups it appears in.
 const CATEGORY_GROUPS = [
@@ -126,40 +122,6 @@ async function fetchSatcat() {
   return parseCsv(text);
 }
 
-// The UCS workbook is third-party input fed to a spreadsheet parser, so bound
-// it. NOTE: xlsx@0.18.5 carries two high-severity advisories (prototype
-// pollution, ReDoS) and the fixed release is NOT published to the npm registry.
-// Remedy: npm i -D "xlsx@https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
-// This runs at build time only — xlsx is never present in the production image.
-const MAX_UCS_BYTES = 25 * 1024 * 1024;
-
-async function fetchUcs() {
-  for (const url of [UCS_URL, UCS_FALLBACK_URL]) {
-    try {
-      // Never fetch the workbook over plaintext, even if UCS_URL is overridden.
-      if (new URL(url).protocol !== "https:") {
-        console.warn(`[ucs] Refusing non-https source: ${url}`);
-        continue;
-      }
-      const res = await fetchWithRetry(url);
-      const raw = await res.arrayBuffer();
-      if (raw.byteLength > MAX_UCS_BYTES) {
-        throw new Error(`workbook too large (${raw.byteLength} bytes > ${MAX_UCS_BYTES})`);
-      }
-      const buf = new Uint8Array(raw);
-      const wb = XLSX.read(buf, { type: "array" });
-      const sheet = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-      console.log(`[ucs] Loaded ${rows.length} rows from ${url}`);
-      return rows;
-    } catch (err) {
-      console.warn(`[ucs] Failed to fetch from ${url}: ${err.message}`);
-    }
-  }
-  console.warn("[ucs] All UCS sources failed; continuing without UCS metadata.");
-  return [];
-}
-
 // Minimal RFC-4180-ish CSV parser (handles quoted fields with embedded commas/quotes).
 function parseCsv(text) {
   const rows = [];
@@ -206,40 +168,6 @@ function parseCsv(text) {
     });
     return obj;
   });
-}
-
-function normalizeUcsRow(row) {
-  const pick = (...keys) => {
-    for (const k of keys) {
-      for (const actual of Object.keys(row)) {
-        if (actual.toLowerCase().replace(/[^a-z0-9]+/g, "") === k.toLowerCase().replace(/[^a-z0-9]+/g, "")) {
-          const v = row[actual];
-          if (v !== "" && v != null) return String(v).trim();
-        }
-      }
-    }
-    return undefined;
-  };
-  const noradRaw = pick("NORAD Number", "norad number", "noradid", "noradnumber");
-  const norad = noradRaw ? Number(String(noradRaw).replace(/[^0-9]/g, "")) : NaN;
-  if (!Number.isFinite(norad) || norad <= 0) return null;
-  return {
-    noradId: norad,
-    users: pick("Users"),
-    purpose: pick("Purpose"),
-    detailedPurpose: pick("Detailed Purpose"),
-    operatorCountry: pick("Country of Operator/Owner", "Country of Operator"),
-    operator: pick("Operator/Owner", "Operator"),
-    contractor: pick("Contractor"),
-    contractorCountry: pick("Country of Contractor"),
-    launchMassKg: pick("Launch Mass (kg.)", "Launch Mass (kg)"),
-    dryMassKg: pick("Dry Mass (kg.)", "Dry Mass (kg)"),
-    powerW: pick("Power (watts)"),
-    launchDate: pick("Date of Launch"),
-    expectedLifetimeYears: pick("Expected Lifetime (yrs.)", "Expected Lifetime (yrs)"),
-    launchSite: pick("Launch Site"),
-    launchVehicle: pick("Launch Vehicle"),
-  };
 }
 
 // Derive orbit class from TLE mean motion (revs/day) and eccentricity.
@@ -337,22 +265,11 @@ async function main() {
     });
   }
 
-  console.log(`[build-dataset] Fetching UCS Satellite Database...`);
-  const ucsRaw = await fetchUcs();
-  const ucsByNorad = new Map();
-  for (const row of ucsRaw) {
-    const norm = normalizeUcsRow(row);
-    if (norm) ucsByNorad.set(norm.noradId, norm);
-  }
-  console.log(`[build-dataset]   UCS matched NORAD rows: ${ucsByNorad.size}`);
-
   // Build the merged list — one record per NORAD id that has TLE data (i.e. propagatable).
   const satellites = [];
   for (const [norad, tle] of tleByNorad) {
     const cats = categoriesByNorad.get(norad);
     const sc = satcatByNorad.get(norad);
-    const ucs = ucsByNorad.get(norad);
-
     // Parse TLE line 2 for mean motion, eccentricity, inclination to derive orbit class.
     const l2 = tle.tleLine2;
     const inclination = Number(l2.slice(8, 16).trim());
@@ -374,24 +291,7 @@ async function main() {
       inclinationDeg: sc?.inclination ?? (Number.isFinite(inclination) ? inclination : null),
       apogeeKm: sc?.apogeeKm ?? apogeeKm,
       perigeeKm: sc?.perigeeKm ?? perigeeKm,
-      launchDate: ucs?.launchDate || sc?.launchDate || "",
-      ucs: ucs
-        ? {
-            users: ucs.users,
-            purpose: ucs.purpose,
-            detailedPurpose: ucs.detailedPurpose,
-            operatorCountry: ucs.operatorCountry,
-            operator: ucs.operator,
-            contractor: ucs.contractor,
-            contractorCountry: ucs.contractorCountry,
-            launchMassKg: ucs.launchMassKg,
-            dryMassKg: ucs.dryMassKg,
-            powerW: ucs.powerW,
-            expectedLifetimeYears: ucs.expectedLifetimeYears,
-            launchSite: ucs.launchSite,
-            launchVehicle: ucs.launchVehicle,
-          }
-        : undefined,
+      launchDate: sc?.launchDate || "",
     });
   }
 
@@ -426,7 +326,6 @@ async function main() {
       {
         generatedAt,
         satelliteCount: satellites.length,
-        ucsMatchCount: ucsByNorad.size,
         satcatCount: satcatByNorad.size,
       },
       null,
@@ -437,7 +336,7 @@ async function main() {
   const iss = satellites.find((s) => s.noradId === 25544);
   console.log(
     `[build-dataset] Wrote ${satellites.length} satellites. ISS entry: ${
-      iss ? `name="${iss.name}" categories=[${iss.categories.join(",")}] ucs=${iss.ucs ? "yes" : "no"}` : "NOT FOUND"
+      iss ? `name="${iss.name}" categories=[${iss.categories.join(",")}]` : "NOT FOUND"
     }`,
   );
 }

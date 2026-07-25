@@ -4,10 +4,12 @@ import { mkDataset, mkFilters, mkSat } from "../factory";
 
 type VisibleState = Parameters<typeof computeVisibleIds>[0];
 
+// Usage is inferred from CelesTrak category groups + name heuristics
+// (see src/data/usage.ts).
 const sats = [
-  mkSat({ noradId: 1, name: "STARLINK-1", orbitClass: "LEO", objectType: "PAY", ucs: { users: "Commercial" } }),
-  mkSat({ noradId: 2, name: "GPS-2", orbitClass: "GEO", objectType: "PAY", ucs: { users: "Government" } }),
-  mkSat({ noradId: 3, name: "DEBRIS-3", orbitClass: "LEO", objectType: "DEB", ucs: { users: "Military" } }),
+  mkSat({ noradId: 1, name: "STARLINK-1", orbitClass: "LEO", objectType: "PAY", categories: ["starlink"] }),
+  mkSat({ noradId: 2, name: "GPS-2", orbitClass: "GEO", objectType: "PAY", categories: ["gps-ops"] }),
+  mkSat({ noradId: 3, name: "DEBRIS-3", orbitClass: "LEO", objectType: "DEB", categories: ["military"] }),
 ];
 const ds = mkDataset(sats);
 
@@ -28,7 +30,7 @@ describe("computeVisibleIds", () => {
     expect(visible(mkFilters({ objectTypes: new Set(["DEB"]) }))).toEqual(new Set([3]));
   });
 
-  it("filters by usage bucket (from UCS metadata)", () => {
+  it("filters by inferred usage bucket", () => {
     expect(visible(mkFilters({ users: new Set(["Commercial"]) }))).toEqual(new Set([1]));
     expect(visible(mkFilters({ users: new Set(["Military"]) }))).toEqual(new Set([3]));
   });
