@@ -121,10 +121,14 @@ export function MobileApp({ satellites, visibleIds, client }: Props) {
         <span className="m-tracked">{visibleIds.size}<span className="dim">/{satellites.length}</span></span>
       </div>
 
-      {/* floating sim pill */}
-      {tab === "globe" && !searchOpen && (
+      {/* Floating sim pill. Hidden while the sheet is expanded (no room), and
+          lifted above the collapsed sheet — otherwise the sheet covers it and
+          the timeline is unreachable whenever a satellite is selected. */}
+      {tab === "globe" && !searchOpen && !(sel && sheetExpanded) && (
         <button
-          className={"m-simpill" + (simTime == null ? " live" : "")}
+          className={
+            "m-simpill" + (simTime == null ? " live" : "") + (sel ? " with-sheet" : "")
+          }
           onClick={() => setTimelineOpen(true)}
         >
           <span className="dim">SIM</span> {simDisplay}

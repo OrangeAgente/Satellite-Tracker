@@ -128,6 +128,28 @@ test.describe("mobile — timeline & sim", () => {
     await page.getByRole("button", { name: "LIVE", exact: true }).click();
     await expect(page.locator(".m-timeline .m-panel-h")).toContainText("SIM LIVE");
   });
+
+  // Regression: the sheet (238px tall, collapsed) used to sit on top of the sim
+  // pill, so the timeline was unreachable whenever a satellite was selected —
+  // the case the test above never covered because nothing is selected there.
+  test("the sim pill is still reachable with a satellite selected", async ({ page }) => {
+    await gotoMobile(page);
+    await selectFirstSat(page);
+    await expect(page.locator(".m-sheet")).toBeVisible();
+
+    const pill = page.locator(".m-simpill");
+    await expect(pill).toBeVisible();
+    // Nothing may cover it: the element at its centre must be the pill itself.
+    const onTop = await pill.evaluate((el) => {
+      const b = el.getBoundingClientRect();
+      const top = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+      return !!top && (top === el || el.contains(top));
+    });
+    expect(onTop, "sim pill is covered by another element").toBe(true);
+
+    await pill.click({ timeout: 5000 });
+    await expect(page.locator(".m-timeline")).toBeVisible();
+  });
 });
 
 test.describe("mobile — agent", () => {
