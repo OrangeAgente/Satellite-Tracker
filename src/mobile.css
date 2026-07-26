@@ -61,7 +61,11 @@
 .m-clockline .m-tracked { margin-left: auto; color: var(--ops-hot); }
 
 /* sim pill */
-.m-simpill { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--m-tabbar) + 84px); display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px; background: rgba(10,13,17,.82); border: 1px solid var(--ops-line); color: var(--ops-fg-bright); font-size: 10px; letter-spacing: .06em; z-index: 9; backdrop-filter: blur(4px); }
+.m-simpill { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(var(--m-tabbar) + 84px); display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; min-height: 30px; background: rgba(10,13,17,.82); border: 1px solid var(--ops-line); color: var(--ops-fg-bright); font-size: 10px; letter-spacing: .06em; z-index: 13; backdrop-filter: blur(4px); }
+/* With an InfoSheet on screen the default offset puts the pill *behind* the
+   sheet (which starts 238px above the tab bar), making the timeline
+   unreachable whenever a satellite is selected. Lift it clear of the sheet. */
+.m-simpill.with-sheet { bottom: calc(var(--m-tabbar) + 246px); }
 .m-simpill.live { color: var(--ops-ok); }
 .m-simpill-rate { color: var(--ops-hot); }
 
@@ -71,15 +75,15 @@
 .m-panel-h { display: flex; justify-content: space-between; align-items: center; padding: 11px 16px; border-bottom: 1px solid var(--ops-line); font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--ops-fg-dim); }
 .m-panel-h .right { color: var(--ops-hot); }
 .m-panel-h .m-head-actions { display: flex; align-items: center; gap: 10px; }
-.m-panel-x { background: none; border: none; color: var(--ops-fg-dim); font-size: 19px; line-height: 1; padding: 0 2px; }
+.m-panel-x { background: none; border: none; color: var(--ops-fg-dim); font-size: 19px; line-height: 1; min-width: 34px; min-height: 30px; display: inline-flex; align-items: center; justify-content: center; }
 .m-panel-note { padding: 7px 16px; font-size: 9.5px; letter-spacing: .04em; border-bottom: 1px solid var(--ops-line-soft); }
 
 /* pills */
-.m-pill { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; background: var(--ops-soft-box); border: 1px solid var(--ops-soft-border); color: var(--ops-fg); font-size: 10px; letter-spacing: .05em; }
+.m-pill { display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 6px 10px; min-height: 28px; background: var(--ops-soft-box); border: 1px solid var(--ops-soft-border); color: var(--ops-fg); font-size: 10px; letter-spacing: .05em; }
 .m-pill i { width: 6px; height: 6px; display: inline-block; }
 .m-pill.on { background: var(--ops-pill-on); border-color: var(--ops-hot); color: var(--ops-hot); }
 .m-pill:disabled { opacity: .5; }
-.m-clear { background: none; border: 1px solid var(--ops-soft-border); color: var(--ops-fg-dim); padding: 3px 8px; font-size: 9.5px; letter-spacing: .08em; }
+.m-clear { background: none; border: 1px solid var(--ops-soft-border); color: var(--ops-fg-dim); padding: 5px 10px; min-height: 28px; display: inline-flex; align-items: center; justify-content: center; font-size: 9.5px; letter-spacing: .08em; }
 .m-clear.on { background: var(--ops-hot); color: var(--ops-bg); border-color: var(--ops-hot); }
 .m-clear:disabled { opacity: .4; }
 
@@ -110,7 +114,7 @@
 .m-sheet-title { flex: 1; min-width: 0; }
 .m-sheet-title .name { font-size: 14px; color: var(--ops-fg-bright); font-weight: 500; line-height: 1.2; }
 .m-sheet-title .sub { font-size: 10px; color: var(--ops-fg-dim); margin-top: 3px; }
-.m-sheet-x { background: none; border: none; color: var(--ops-fg-dim); font-size: 20px; line-height: 1; padding: 0 4px; }
+.m-sheet-x { background: none; border: none; color: var(--ops-fg-dim); font-size: 20px; line-height: 1; min-width: 34px; min-height: 34px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .m-statgrid { display: grid; grid-template-columns: repeat(3,1fr); border-bottom: 1px solid var(--ops-line); flex-shrink: 0; }
 .m-cell { padding: 8px 10px; border-right: 1px solid var(--ops-line); }
 .m-cell:nth-child(3n) { border-right: none; }
@@ -172,7 +176,7 @@
 .m-tray-card.sel { border-color: var(--ops-hot); background: var(--ops-row-sel); }
 .m-tray-name { font-size: 10px; color: var(--ops-hot); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 12px; }
 .m-tray-orb { font-size: 9px; }
-.m-tray-x { position: absolute; top: 3px; right: 5px; color: var(--ops-fg-dim); font-size: 13px; line-height: 1; }
+.m-tray-x { position: absolute; top: 0; right: 0; color: var(--ops-fg-dim); font-size: 13px; line-height: 1; min-width: 28px; min-height: 28px; display: inline-flex; align-items: center; justify-content: center; }
 
 /* tab bar */
 .m-tabs { position: absolute; left: 0; right: 0; bottom: 0; height: var(--m-tabbar); padding-bottom: calc(20px + var(--m-safe-bottom)); display: flex; background: linear-gradient(180deg, var(--ops-bg2), var(--ops-bg)); border-top: 1px solid var(--ops-line); z-index: 20; }
@@ -183,6 +187,9 @@
 
 /* timeline sheet */
 .m-scrim { position: absolute; inset: 0; background: rgba(2,4,8,.55); z-index: 25; }
+/* The timeline handle has no chevron, so it needs its own padding to stay a
+   comfortable drag/tap target (the InfoSheet handle is already tall enough). */
+.m-timeline .m-handle { padding: 14px 0 10px; }
 .m-timeline { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ops-bg2); border-top: 1px solid var(--ops-line); z-index: 26; padding-bottom: calc(22px + var(--m-safe-bottom)); animation: mrise .22s ease; }
 .m-tl-controls { display: flex; justify-content: center; gap: 10px; padding: 12px 0 8px; }
 .m-tl-controls button { background: var(--ops-btn-bg); border: 1px solid var(--ops-line); color: var(--ops-hot); font-size: 13px; padding: 6px 16px; }
@@ -192,7 +199,7 @@
 .m-tl-track .tick { position: absolute; top: 8px; transform: translateX(-50%); font-size: 8.5px; color: var(--ops-fg-dim); }
 .m-tl-track .cursor { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--ops-hot); transform: translateX(-1px); }
 .m-tl-speed { display: flex; justify-content: center; gap: 4px; padding: 10px 0 6px; }
-.m-tl-speed button { background: var(--ops-btn-bg); border: 1px solid var(--ops-line); color: var(--ops-hot); font-size: 10px; padding: 5px 9px; }
+.m-tl-speed button { background: var(--ops-btn-bg); border: 1px solid var(--ops-line); color: var(--ops-hot); font-size: 10px; padding: 7px 11px; min-height: 30px; min-width: 40px; }
 .m-tl-speed button.on { background: var(--ops-hot); color: var(--ops-bg2); }
 
 /* search overlay */
