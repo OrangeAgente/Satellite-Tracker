@@ -205,35 +205,72 @@ function rcsSize(rcs) {
  * either get the right spacecraft or nothing. Best-effort: if Wikidata is
  * unavailable the build continues without this enrichment.
  */
-async function fetchWikidata() {
-  const sparql = `SELECT ?cospar ?itemLabel ?vehicleLabel ?operatorLabel WHERE {
+const WIKIDATA_PAGE = 2000;
+
+async function fetchWikidataPage(offset) {
+  // Paginated: a single ~1.6MB response gets truncated on some networks, which
+  // surfaces as a JSON parse error. Smaller pages are far more reliable, and a
+  // failed page costs only that page.
+  const sparql = `SELECT ?cospar ?vehicleLabel ?operatorLabel WHERE {
   ?item wdt:P247 ?cospar .
   OPTIONAL { ?item wdt:P375 ?vehicle. }
   OPTIONAL { ?item wdt:P137 ?operator. }
   SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
-}`;
+} ORDER BY ?cospar LIMIT ${WIKIDATA_PAGE} OFFSET ${offset}`;
+  const res = await fetchWithRetry("https://query.wikidata.org/sparql", {
+    method: "POST",
+    headers: {
+      Accept: "application/sparql-results+json",
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: "query=" + encodeURIComponent(sparql),
+  }, { retries: 2, timeoutMs: 90_000 });
+  // Parse from text so a truncated body throws here and is retried by the caller
+  // rather than silently yielding an empty result set.
+  return JSON.parse(await res.text());
+}
+
+async function fetchWikidata() {
   const byCospar = new Map();
-  try {
-    const res = await fetchWithRetry("https://query.wikidata.org/sparql", {
-      method: "POST",
-      headers: {
-        Accept: "application/sparql-results+json",
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: "query=" + encodeURIComponent(sparql),
-    }, { retries: 2, timeoutMs: 90_000 });
-    const json = await res.json();
-    for (const b of json.results?.bindings || []) {
+  for (let offset = 0; offset < 40_000; offset += WIKIDATA_PAGE) {
+    let json;
+    try {
+      json = await fetchWikidataPage(offset);
+    } catch (err) {
+      console.warn(`[wikidata] page at offset ${offset} failed: ${err.message}`);
+      break; // keep whatever we already have
+    }
+    const rows = json.results?.bindings || [];
+    for (const b of rows) {
       const id = b.cospar?.value?.trim();
       if (!id) continue;
       byCospar.set(id, {
-        label: b.itemLabel?.value || "",
         launchVehicle: b.vehicleLabel?.value || "",
         operator: b.operatorLabel?.value || "",
       });
     }
-  } catch (err) {
-    console.warn(`[wikidata] enrichment unavailable: ${err.message}`);
+    if (rows.length < WIKIDATA_PAGE) break; // last page
+  }
+  return byCospar;
+}
+
+/**
+ * Offline fallback: the committed seed already carries this enrichment, so if
+ * Wikidata is unreachable at build time we reuse it rather than shipping a
+ * dataset that has silently lost launch vehicles and operators.
+ */
+async function enrichmentFromSeed() {
+  const byCospar = new Map();
+  try {
+    const gz = await fs.readFile(path.join(OUT_DIR, "satellites.seed.json.gz"));
+    const { gunzipSync } = await import("node:zlib");
+    const seed = JSON.parse(gunzipSync(gz).toString("utf8"));
+    for (const s of seed.satellites || []) {
+      if (!s.intlDes || (!s.launchVehicle && !s.operator)) continue;
+      byCospar.set(s.intlDes, { launchVehicle: s.launchVehicle || "", operator: s.operator || "" });
+    }
+  } catch {
+    /* no seed available — carry on unenriched */
   }
   return byCospar;
 }
@@ -337,8 +374,12 @@ async function main() {
   }
 
   console.log("[build-dataset] Fetching Wikidata spacecraft metadata...");
-  const wikidataByCospar = await fetchWikidata();
+  let wikidataByCospar = await fetchWikidata();
   console.log(`[build-dataset]   Wikidata rows by COSPAR id: ${wikidataByCospar.size}`);
+  if (wikidataByCospar.size === 0) {
+    wikidataByCospar = await enrichmentFromSeed();
+    console.log(`[build-dataset]   Wikidata unavailable — reused seed enrichment: ${wikidataByCospar.size} rows`);
+  }
 
   // Build the merged list — one record per NORAD id that has TLE data (i.e. propagatable).
   const satellites = [];
