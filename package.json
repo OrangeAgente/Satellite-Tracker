@@ -3,6 +3,31 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "description": "Mission-control-styled satellite tracker: ~16k objects propagated live with SGP4 on a 3D globe, with pass prediction and an LLM assistant grounded in real orbital state.",
+  "license": "MIT",
+  "author": "Joshua Gillmore",
+  "homepage": "https://sattracker-production.up.railway.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OrangeAgente/Satellite-Tracker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/OrangeAgente/Satellite-Tracker/issues"
+  },
+  "keywords": [
+    "satellite",
+    "sgp4",
+    "tle",
+    "celestrak",
+    "three.js",
+    "orbital-mechanics",
+    "space",
+    "visualization"
+  ],
+  "engines": {
+    "node": ">=22",
+    "npm": ">=12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

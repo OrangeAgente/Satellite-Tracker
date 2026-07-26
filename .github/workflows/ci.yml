@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck · lint · test · build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # npm 10 and npm 12 resolve this lockfile differently; the Docker build
+      # pins npm 12, so CI must match or `npm ci` fails on a valid lockfile.
+      - name: Pin npm to match the lockfile
+        run: npm i -g npm@12
+
+      - name: Install (strict)
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      # The dataset is gitignored, so restore the committed seed for the build
+      # and for the E2E run (which needs a populated catalog to click through).
+      - name: Restore bundled dataset seed
+        run: |
+          mkdir -p public/data
+          node scripts/ensure-dataset.mjs
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (mobile + desktop)
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm i -g npm@12
+      - run: npm ci
+      # Production dependencies must stay clean. Dev-only advisories are
+      # reported but don't fail the build.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=low
+      - name: Audit all dependencies (informational)
+        run: npm audit || true
+
+  docker:
+    name: docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build production image
+        run: docker build --target prod -t sattracker:ci .
+      - name: Smoke-test the container
+        run: |
+          docker run -d --name satt -p 8080:8080 sattracker:ci
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8080/healthz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://localhost:8080/healthz
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/)
+          echo "homepage: $code"; test "$code" = "200"
+          docker rm -f satt
