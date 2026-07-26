@@ -78,9 +78,15 @@ export function InfoPanel() {
         <div className="ops-section-h">
           <span>Mission</span>
         </div>
+        <Kv k="OPERATOR" v={sel.operator} />
         <Kv k="COUNTRY" v={sel.country} />
         <Kv k="USAGE" v={[...inferUsage(sel)].join(", ")} />
+        <Kv k="STATUS" v={sel.opsStatus} />
         <Kv k="INTL DES" v={sel.intlDes} />
+        <Kv k="VEHICLE" v={sel.launchVehicle} />
+        <Kv k="SITE" v={sel.launchSite} />
+        <Kv k="SIZE" v={sel.sizeClass} />
+        <Kv k="DECAYED" v={sel.decayDate} />
         <Kv k="LAUNCH" v={sel.launchDate} />
         {sel.categories.length > 0 && <Kv k="TAGS" v={sel.categories.slice(0, 3).join(", ")} />}
       </section>

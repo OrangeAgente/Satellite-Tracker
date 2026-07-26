@@ -154,6 +154,12 @@ export function buildSystemPrompt(sat: Satellite, live?: LiveState | null): stri
     sat.apogeeKm != null ? `  apogee: ${sat.apogeeKm} km` : "  apogee: unknown",
     sat.perigeeKm != null ? `  perigee: ${sat.perigeeKm} km` : "  perigee: unknown",
     `  launch date: ${sanitizeField(sat.launchDate) || "unknown"}`,
+    dataLine("launch site", sat.launchSite),
+    dataLine("launch vehicle", sat.launchVehicle),
+    dataLine("operator", sat.operator),
+    dataLine("operational status", sat.opsStatus),
+    dataLine("size class (radar cross-section)", sat.sizeClass),
+    dataLine("decayed / re-entered", sat.decayDate),
     `  inferred usage: ${usage}`,
     dataLine("categories", sat.categories.join(", ")),
   ];
