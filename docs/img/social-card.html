@@ -1,0 +1,79 @@
+<!doctype html>
+<!--
+  Source for docs/img/social-preview.jpg (GitHub Settings -> General -> Social preview).
+  Open this file at a 1280x640 viewport and screenshot it, or:
+    npx playwright screenshot --viewport-size=1280,640 docs/img/social-card.html out.jpg
+-->
+<html>
+<head>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    width: 1280px; height: 640px; overflow: hidden;
+    background: #0d1115;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    color: #cdd5df;
+    position: relative;
+  }
+  .shot {
+    position: absolute; inset: 0;
+    background-image: url("./desktop.png");
+    /* Oversize + left-anchor so the globe lands right-of-centre, clear of the text. */
+    background-size: 138% auto;
+    background-position: 0% 46%;
+    background-repeat: no-repeat;
+    opacity: 0.95;
+  }
+  .veil {
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(90deg, rgba(5,8,16,0.99) 0%, rgba(5,8,16,0.97) 38%, rgba(5,8,16,0.55) 62%, rgba(5,8,16,0.12) 100%),
+      linear-gradient(0deg, rgba(5,8,16,0.55) 0%, rgba(5,8,16,0) 45%);
+  }
+  .content { position: absolute; inset: 0; padding: 62px 70px; display: flex; flex-direction: column; }
+  .logo { display: flex; align-items: center; gap: 12px; font-size: 19px; letter-spacing: 0.22em; font-weight: 600; color: #cdd5df; }
+  .logo .glyph { color: #ffb547; font-size: 21px; }
+  h1 {
+    margin-top: 30px;
+    font-size: 62px; line-height: 1.06; font-weight: 700;
+    color: #ffe4b5; letter-spacing: -0.01em; max-width: 700px;
+  }
+  h1 .accent { color: #ffb547; }
+  p.sub {
+    margin-top: 22px; font-size: 21px; line-height: 1.55; color: #9aa6b4;
+    max-width: 620px; font-weight: 400;
+  }
+  .stats { margin-top: auto; display: flex; gap: 46px; }
+  .stat .v { font-size: 30px; font-weight: 700; color: #ffb547; }
+  .stat .k { font-size: 12.5px; letter-spacing: 0.17em; color: #6b7280; margin-top: 6px; text-transform: uppercase; }
+  .bracket { position: absolute; width: 30px; height: 30px; border: 2px solid #ffb547; opacity: 0.85; }
+  .bracket.tl { top: 26px; left: 26px; border-right: none; border-bottom: none; }
+  .bracket.tr { top: 26px; right: 26px; border-left: none; border-bottom: none; }
+  .bracket.bl { bottom: 26px; left: 26px; border-right: none; border-top: none; }
+  .bracket.br { bottom: 26px; right: 26px; border-left: none; border-top: none; }
+</style>
+</head>
+<body>
+  <div class="shot"></div>
+  <div class="veil"></div>
+  <span class="bracket tl"></span><span class="bracket tr"></span>
+  <span class="bracket bl"></span><span class="bracket br"></span>
+  <div class="content">
+    <div class="logo"><span class="glyph">▲</span>SATCOM·OPS</div>
+    <h1>Satellite Tracker<br /><span class="accent">Ops Console</span></h1>
+    <p class="sub">
+      ~16,000 objects propagated live with SGP4 on a 3D globe — with pass
+      prediction and an assistant grounded in real orbital state.
+    </p>
+    <div class="stats">
+      <div class="stat"><div class="v">16,123</div><div class="k">objects tracked</div></div>
+      <div class="stat"><div class="v">SGP4</div><div class="k">in a web worker</div></div>
+      <div class="stat"><div class="v">107</div><div class="k">tests passing</div></div>
+    </div>
+  </div>
+</body>
+</html>
