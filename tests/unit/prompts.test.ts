@@ -65,6 +65,29 @@ describe("buildSystemPrompt", () => {
     expect(sys).toContain("inferred usage:");
   });
 
+  it("surfaces the enrichment fields the agent used to say were missing", () => {
+    const sys = buildSystemPrompt(
+      mkSat({
+        launchVehicle: "Ariane 5ES",
+        launchSite: "Guiana Space Centre, Kourou",
+        operator: "European Union Agency for the Space Programme",
+        opsStatus: "operational",
+        sizeClass: "large",
+      }),
+    );
+    expect(sys).toContain("launch vehicle: Ariane 5ES");
+    expect(sys).toContain("launch site: Guiana Space Centre, Kourou");
+    expect(sys).toContain("operational status: operational");
+    expect(sys).toContain("size class");
+  });
+
+  it("omits enrichment lines entirely when the catalogs don't know them", () => {
+    const sys = buildSystemPrompt(mkSat());
+    expect(sys).not.toContain("launch vehicle:");
+    expect(sys).not.toContain("launch site:");
+    expect(sys).not.toContain("operational status:");
+  });
+
   it("omits the LIVE STATE block when no live state is given", () => {
     expect(buildSystemPrompt(mkSat())).not.toContain("LIVE STATE");
   });

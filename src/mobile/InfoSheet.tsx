@@ -49,10 +49,16 @@ export function InfoSheet({
 
   const usage = [...inferUsage(sat)].join(", ");
   const mission: [string, string | undefined][] = [
+    ["OPERATOR", sat.operator],
     ["COUNTRY", sat.country],
     ["USAGE", usage],
+    ["STATUS", sat.opsStatus],
     ["INTL DES", sat.intlDes],
     ["LAUNCH", sat.launchDate],
+    ["VEHICLE", sat.launchVehicle],
+    ["SITE", sat.launchSite],
+    ["SIZE", sat.sizeClass],
+    ["DECAYED", sat.decayDate],
     ["TAGS", sat.categories.slice(0, 3).join(", ") || undefined],
   ];
 

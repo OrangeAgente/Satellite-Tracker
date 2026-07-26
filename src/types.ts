@@ -15,6 +15,17 @@ export interface Satellite {
   apogeeKm: number | null;
   perigeeKm: number | null;
   launchDate: string;
+
+  // Optional enrichment, present only when the upstream catalogs know it.
+  // launchSite/opsStatus/sizeClass/decayDate come from CelesTrak SATCAT;
+  // launchVehicle/operator are joined from Wikidata on the COSPAR designator.
+  launchSite?: string;
+  opsStatus?: string;
+  sizeClass?: string;
+  rcsM2?: number;
+  decayDate?: string;
+  launchVehicle?: string;
+  operator?: string;
 }
 
 export interface Dataset {

@@ -170,6 +170,74 @@ function parseCsv(text) {
   });
 }
 
+// CelesTrak SATCAT code tables. Unknown codes fall through unchanged so the
+// agent still sees something meaningful rather than a blank.
+const LAUNCH_SITES = {
+  AFETR: "Cape Canaveral, USA", AFWTR: "Vandenberg SFB, USA", KSCUT: "Uchinoura, Japan",
+  TYMSC: "Baikonur Cosmodrome, Kazakhstan", PLMSC: "Plesetsk Cosmodrome, Russia",
+  FRGUI: "Guiana Space Centre, Kourou", TANSC: "Tanegashima, Japan", JSC: "Jiuquan, China",
+  TSC: "Taiyuan, China", XSC: "Xichang, China", WSC: "Wenchang, China",
+  SRILR: "Satish Dhawan (Sriharikota), India", WLPIS: "Wallops Island, USA",
+  KODAK: "Kodiak, Alaska, USA", SEAL: "Sea Launch (Pacific)", SEALS: "Sea Launch (Pacific)",
+  SNMLP: "San Marco Platform, Kenya", SVOBO: "Svobodny, Russia", YAVNE: "Palmachim, Israel",
+  DLS: "Dombarovsky, Russia", KYMSC: "Kapustin Yar, Russia", HGSTR: "Hammaguir, Algeria",
+  WOMRA: "Woomera, Australia", SEMLS: "Semnan, Iran", SUBL: "Submarine launch",
+  ERAS: "Eastern Range (air drop)", WRAS: "Western Range (air drop)", VOSTO: "Vostochny, Russia",
+  MAHIA: "Mahia Peninsula, New Zealand", NSC: "Naro, South Korea", KWAJ: "Kwajalein Atoll",
+  RLLB: "Rocket Lab LC-1, New Zealand", BOWMN: "Boardman, Oregon, USA",
+};
+const OPS_STATUS = {
+  "+": "operational", "-": "nonoperational", P: "partially operational",
+  B: "backup/standby", S: "spare", X: "extended mission", D: "decayed", "?": "unknown",
+};
+/** RCS in m² -> CelesTrak's size bucket. */
+function rcsSize(rcs) {
+  if (!Number.isFinite(rcs) || rcs <= 0) return "";
+  if (rcs < 0.1) return "small";
+  if (rcs <= 1.0) return "medium";
+  return "large";
+}
+
+/**
+ * One bulk SPARQL query for every Wikidata item carrying a COSPAR ID (P247),
+ * with its launch vehicle (P375) and operator (P137). Joining on the
+ * international designator is an exact match, unlike fuzzy name search — so we
+ * either get the right spacecraft or nothing. Best-effort: if Wikidata is
+ * unavailable the build continues without this enrichment.
+ */
+async function fetchWikidata() {
+  const sparql = `SELECT ?cospar ?itemLabel ?vehicleLabel ?operatorLabel WHERE {
+  ?item wdt:P247 ?cospar .
+  OPTIONAL { ?item wdt:P375 ?vehicle. }
+  OPTIONAL { ?item wdt:P137 ?operator. }
+  SERVICE wikibase:label { bd:serviceParam wikibase:language "en,mul". }
+}`;
+  const byCospar = new Map();
+  try {
+    const res = await fetchWithRetry("https://query.wikidata.org/sparql", {
+      method: "POST",
+      headers: {
+        Accept: "application/sparql-results+json",
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: "query=" + encodeURIComponent(sparql),
+    }, { retries: 2, timeoutMs: 90_000 });
+    const json = await res.json();
+    for (const b of json.results?.bindings || []) {
+      const id = b.cospar?.value?.trim();
+      if (!id) continue;
+      byCospar.set(id, {
+        label: b.itemLabel?.value || "",
+        launchVehicle: b.vehicleLabel?.value || "",
+        operator: b.operatorLabel?.value || "",
+      });
+    }
+  } catch (err) {
+    console.warn(`[wikidata] enrichment unavailable: ${err.message}`);
+  }
+  return byCospar;
+}
+
 // Derive orbit class from TLE mean motion (revs/day) and eccentricity.
 // Heuristic: LEO < 2000 km alt, MEO 2000–35586, GEO ~35786 ± with low ecc, HEO for highly elliptical.
 function deriveOrbit(meanMotion, eccentricity, inclination) {
@@ -257,6 +325,9 @@ async function main() {
       opsStatus: row.OPS_STATUS_CODE || "",
       country: row.OWNER || row.COUNTRY || "",
       launchDate: row.LAUNCH_DATE || "",
+      launchSite: row.LAUNCH_SITE || "",
+      rcs: Number(row.RCS) || null,
+      orbitType: row.ORBIT_TYPE || "",
       decayDate: row.DECAY_DATE || "",
       periodMin: Number(row.PERIOD) || null,
       inclination: Number(row.INCLINATION) || null,
@@ -265,11 +336,18 @@ async function main() {
     });
   }
 
+  console.log("[build-dataset] Fetching Wikidata spacecraft metadata...");
+  const wikidataByCospar = await fetchWikidata();
+  console.log(`[build-dataset]   Wikidata rows by COSPAR id: ${wikidataByCospar.size}`);
+
   // Build the merged list — one record per NORAD id that has TLE data (i.e. propagatable).
   const satellites = [];
+  let wdMatched = 0;
   for (const [norad, tle] of tleByNorad) {
     const cats = categoriesByNorad.get(norad);
     const sc = satcatByNorad.get(norad);
+    const wd = sc?.intlDes ? wikidataByCospar.get(sc.intlDes) : undefined;
+    if (wd) wdMatched += 1;
     // Parse TLE line 2 for mean motion, eccentricity, inclination to derive orbit class.
     const l2 = tle.tleLine2;
     const inclination = Number(l2.slice(8, 16).trim());
@@ -292,8 +370,17 @@ async function main() {
       apogeeKm: sc?.apogeeKm ?? apogeeKm,
       perigeeKm: sc?.perigeeKm ?? perigeeKm,
       launchDate: sc?.launchDate || "",
+      // Extra grounding for the assistant. All optional — omitted when unknown
+      // so the JSON stays small across ~16k records.
+      ...(sc?.launchSite ? { launchSite: LAUNCH_SITES[sc.launchSite] || sc.launchSite } : {}),
+      ...(sc?.opsStatus && OPS_STATUS[sc.opsStatus] ? { opsStatus: OPS_STATUS[sc.opsStatus] } : {}),
+      ...(rcsSize(sc?.rcs) ? { sizeClass: rcsSize(sc.rcs), rcsM2: sc.rcs } : {}),
+      ...(sc?.decayDate ? { decayDate: sc.decayDate } : {}),
+      ...(wd?.launchVehicle ? { launchVehicle: wd.launchVehicle } : {}),
+      ...(wd?.operator ? { operator: wd.operator } : {}),
     });
   }
+  console.log(`[build-dataset]   Wikidata matched ${wdMatched} of ${satellites.length} objects`);
 
   const generatedAt = new Date().toISOString();
   const payload = {
