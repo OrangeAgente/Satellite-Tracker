@@ -1,4 +1,4 @@
-# Satellite Tracker — "Ops Console"
+# Satellite Tracker: "Ops Console"
 
 [![CI](https://github.com/OrangeAgente/Satellite-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/OrangeAgente/Satellite-Tracker/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
@@ -14,7 +14,7 @@ prediction for your location and an LLM assistant grounded in live orbital state
 ## What it does
 
 - **Real orbital mechanics, client-side.** SGP4/SDP4 propagation runs in a Web Worker at 4 Hz
-  from live CelesTrak TLEs — not canned positions. Earth shadow (eclipse) is computed per object
+  from live CelesTrak TLEs, not canned positions. Earth shadow (eclipse) is computed per object
   in the shader.
 - **Pass prediction.** Enter an observer location and get real AOS/LOS times, max elevation and
   compass headings for the next 24 h. Computed on-device; your coordinates aren't needed by any
@@ -22,8 +22,8 @@ prediction for your location and an LLM assistant grounded in live orbital state
 - **Time travel.** Scrub ±4 h or run the simulation at up to 64×; the globe, ground tracks and
   terminator all follow.
 - **A grounded assistant.** Ask about a selected satellite and the answer is built on real
-  computed state — current sub-satellite point, altitude, velocity, sunlit/eclipsed, and your
-  upcoming passes — rather than the model's recollection.
+  computed state (current sub-satellite point, altitude, velocity, sunlit/eclipsed, and your
+  upcoming passes) rather than the model's recollection.
 - **Responsive.** A purpose-built mobile UI below 768 px, sharing the same store, propagation
   worker and 3D globe as the desktop console.
 
@@ -60,7 +60,7 @@ docker compose --profile prod up --build prod  # production image → :8080
 
 ```
 scripts/build-dataset.mjs   # CelesTrak GP + SATCAT -> public/data/satellites.json
-server/server.js            # static server + /api/chat (Cohere) + /api/tle (cached) — stdlib only
+server/server.js            # static server + /api/chat (Cohere) + /api/tle (cached); stdlib only
 src/propagation/            # SGP4 Web Worker, transferable Float32Array positions
 src/globe/                  # three.js: Earth, 16k-point cloud, orbit line, ground track
 src/agent/                  # prompt construction + live SGP4 state for the assistant
@@ -76,13 +76,13 @@ dependency-free Node process that serves the built site, proxies chat, and cache
 ```bash
 npm run typecheck   # tsc
 npm run lint        # eslint
-npm test            # vitest — unit + component
-npm run test:e2e    # playwright — mobile + desktop (builds and previews first)
+npm test            # vitest: unit + component
+npm run test:e2e    # playwright: mobile + desktop (builds and previews first)
 npm run build       # production bundle
 ```
 
 > **Node 22+ / npm 12+.** The Docker build runs a strict `npm ci`, and npm 10 and 12 resolve this
-> lockfile differently — installing with an older npm will regenerate `package-lock.json` and break
+> lockfile differently; installing with an older npm will regenerate `package-lock.json` and break
 > the image build. See `engines` in `package.json`.
 
 ## Security notes
@@ -98,7 +98,7 @@ This is a public demo, so a few things are deliberate:
 
 ## Data sources & attribution
 
-- **[CelesTrak](https://celestrak.org)** — GP/TLE orbital elements and the SATCAT catalog
+- **[CelesTrak](https://celestrak.org)**: GP/TLE orbital elements and the SATCAT catalog
   (object type, country, launch date). Please respect their
   [usage guidelines](https://celestrak.org/publications/) if you fork this; the server caches TLEs
   for an hour rather than polling per client.
@@ -116,4 +116,4 @@ Positions are derived from public TLEs and are approximate. **Not for operationa
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
