@@ -9,10 +9,10 @@
   "homepage": "https://sattracker-production.up.railway.app",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OrangeAgente/Satellite-Tracker.git"
+    "url": "git+https://github.com/joshuagillmore/Satellite-Tracker.git"
   },
   "bugs": {
-    "url": "https://github.com/OrangeAgente/Satellite-Tracker/issues"
+    "url": "https://github.com/joshuagillmore/Satellite-Tracker/issues"
   },
   "keywords": [
     "satellite",

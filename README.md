@@ -1,6 +1,6 @@
 # Satellite Tracker: "Ops Console"
 
-[![CI](https://github.com/OrangeAgente/Satellite-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/OrangeAgente/Satellite-Tracker/actions/workflows/ci.yml)
+[![CI](https://github.com/joshuagillmore/Satellite-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/joshuagillmore/Satellite-Tracker/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 A mission-control-styled satellite tracker. It renders **~16,000 tracked objects** at their real
